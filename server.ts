@@ -825,7 +825,11 @@ async function initDatabase() {
       }
 
       if (isSuper) {
-        if (u.tenantRole !== "owner") { u.tenantRole = "owner"; changed = true; }
+        // Superadmins are platform staff, never tied to a client tenant — strip any
+        // tenantId/tenantRole left over from before this was fixed, so purging or
+        // deleting a client tenant can never delete the superadmin's own account.
+        if (u.tenantRole !== null) { u.tenantRole = null; changed = true; }
+        if (u.tenantId !== null && u.tenantId !== undefined) { u.tenantId = null; changed = true; }
         if (u.platformRole !== "superadmin") { u.platformRole = "superadmin"; changed = true; }
       } else if (emailLower === "mariana.qualitylogistics@gmail.com") {
         if (u.tenantRole !== "owner") { u.tenantRole = "owner"; changed = true; }
@@ -1166,8 +1170,11 @@ const authMiddleware = (req: AuthenticatedRequest, res: express.Response, next: 
 
   req.user = user;
   req.isGlobalAdmin = user.platformRole === "superadmin";
-  if (req.isGlobalAdmin && req.headers["x-selected-tenant-id"]) {
-    req.tenantId = String(req.headers["x-selected-tenant-id"]);
+  if (req.isGlobalAdmin) {
+    // Superadmins have no tenant of their own — only the tenant they've explicitly
+    // selected in the "Platform View" switcher applies. Without a selection, tenantId
+    // stays unset; routes that need tenant scoping already require a real selection.
+    req.tenantId = req.headers["x-selected-tenant-id"] ? String(req.headers["x-selected-tenant-id"]) : undefined;
   } else {
     req.tenantId = user.tenantId || "t-1";
   }
@@ -1434,14 +1441,17 @@ app.post("/api/auth/google", (req, res) => {
     const isSuper = emailLower === "armando.qualitylogistics@gmail.com" || emailLower === "cnxarmando@gmail.com";
     const isMariana = emailLower === "mariana.qualitylogistics@gmail.com";
     
-    let resolvedTenantId = "t-1";
-    let resolvedTenantRole: TenantRole = "operator";
+    let resolvedTenantId: string | null = "t-1";
+    let resolvedTenantRole: TenantRole | null = "operator";
     let platformRole: PlatformRole = null;
     let invitationToUpdate: any = null;
 
     if (isSuper) {
-      resolvedTenantId = "t-1";
-      resolvedTenantRole = "owner";
+      // Platform superadmins are staff, not employees of any client company — they must
+      // never be tied to a specific tenant, or purging/deleting that tenant would also
+      // delete the superadmin's own account (this happened once, see incident notes).
+      resolvedTenantId = null;
+      resolvedTenantRole = null;
       platformRole = "superadmin";
     } else if (isMariana) {
       resolvedTenantId = "t-1";
