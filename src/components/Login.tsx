@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { apiService } from "../services/api";
 import { UserProfile } from "../types";
-import { Lock, Mail, ClipboardCheck, ArrowRight, ShieldCheck, UserPlus, Sun, Moon, Eye, EyeOff, ShieldAlert, Check } from "lucide-react";
+import { Lock, Mail, ArrowRight, UserPlus, Sun, Moon, Eye, EyeOff, ShieldAlert, Check } from "lucide-react";
 import { motion } from "motion/react";
 import { firebaseAuth, googleProvider, isRealFirebaseConfigured } from "../firebase";
 import { signInWithPopup } from "firebase/auth";
@@ -81,16 +81,6 @@ export default function Login({ onLoginSuccess, darkMode, toggleDarkMode }: Logi
       setError(err.message || "Error logging in with Google.");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const autofill = (role: 'operator' | 'admin') => {
-    if (role === 'operator') {
-      setEmail("operator@logistic.com");
-      setPassword("password123");
-    } else {
-      setEmail("admin@logistic.com");
-      setPassword("password123");
     }
   };
 
@@ -303,32 +293,6 @@ export default function Login({ onLoginSuccess, darkMode, toggleDarkMode }: Logi
                 Firebase not initialized. Enable Firebase in settings.
               </p>
             )}
-          </div>
-
-          {/* Quick Access for Testing */}
-          <div className="mt-6 border-t border-slate-100 dark:border-slate-800 pt-5">
-            <span className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 text-center">
-              Quick Access for Testing
-            </span>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => autofill('operator')}
-                className="flex flex-col items-center p-3.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-850 dark:hover:bg-slate-800/80 border border-slate-150 dark:border-slate-800 rounded-2xl text-center cursor-pointer transition-colors"
-              >
-                <ClipboardCheck className="h-4.5 w-4.5 text-indigo-500 mb-1" />
-                <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">Operator</span>
-                <span className="text-[9px] text-slate-450 dark:text-slate-500 mt-0.5">Yard/Pickups</span>
-              </button>
-
-              <button
-                onClick={() => autofill('admin')}
-                className="flex flex-col items-center p-3.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-850 dark:hover:bg-slate-800/80 border border-slate-150 dark:border-slate-800 rounded-2xl text-center cursor-pointer transition-colors"
-              >
-                <ShieldCheck className="h-4.5 w-4.5 text-emerald-500 mb-1" />
-                <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">Management</span>
-                <span className="text-[9px] text-slate-450 dark:text-slate-500 mt-0.5">Dashboard/Reports</span>
-              </button>
-            </div>
           </div>
         </div>
       </div>
