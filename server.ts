@@ -20,6 +20,16 @@ const __dirname = __filename ? path.dirname(__filename) : "";
 const app = express();
 const PORT = 3000;
 
+// Estimated monthly list price per plan tier, used only to compute an ESTIMATED MRR figure
+// for the superadmin dashboard. There is no real billing/payment integration yet — this is
+// a placeholder based on list price per tier, not actual invoiced revenue. Update these
+// values here if pricing changes; consider wiring to a real billing system later.
+const PLAN_MONTHLY_PRICE_USD: Record<string, number> = {
+  Starter: 99,
+  Pro: 299,
+  Enterprise: 799
+};
+
 // Set up larger payload limits for receiving base64 photo uploads
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ limit: "15mb", extended: true }));
@@ -2669,6 +2679,59 @@ app.get("/api/admin/metrics", authMiddleware, (req: AuthenticatedRequest, res) =
   // Each receipt has some photos, let's say average of 1.45MB per receipt
   const simulatedStorageMB = Math.round(totalReceipts * 1.45 * 10) / 10;
   
+  // Per-tenant breakdown: usage, last activity, and an estimated monthly value.
+  // "Last activity" looks at the most recent audit log entry tied to that tenant (any
+  // action, not just logins), since that's the only activity signal we track today.
+  const auditLogs = currentDB.auditLog || [];
+  const tenantBreakdown = (currentDB.tenants || []).map((t: any) => {
+    const tenantUsers = (currentDB.users || []).filter((u: any) => u.tenantId === t.tenantId);
+    const tenantReceipts = (currentDB.receipts || []).filter((r: any) => r.tenantId === t.tenantId);
+    const tenantBLs = (currentDB.billsOfLading || []).filter((b: any) => b.tenantId === t.tenantId);
+    const tenantUnits = (currentDB.units || []).filter((u: any) => u.tenantId === t.tenantId);
+
+    const tenantLogs = auditLogs
+      .filter((l: any) => l.tenantId === t.tenantId)
+      .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    const lastActivityAt = tenantLogs.length > 0 ? tenantLogs[0].timestamp : null;
+    const daysSinceLastActivity = lastActivityAt
+      ? Math.floor((Date.now() - new Date(lastActivityAt).getTime()) / (1000 * 60 * 60 * 24))
+      : null;
+
+    // Health signal: no activity ever, or none in 30+ days, flags the tenant for attention.
+    // This is a simple heuristic, not a definitive churn prediction.
+    let health: "healthy" | "quiet" | "inactive" = "healthy";
+    if (daysSinceLastActivity === null) health = "inactive";
+    else if (daysSinceLastActivity > 30) health = "inactive";
+    else if (daysSinceLastActivity > 7) health = "quiet";
+
+    const tenantStorageMB = Math.round(tenantReceipts.length * 1.45 * 10) / 10;
+    const estimatedMonthlyValue = t.status === "active" && !t.deletedAt
+      ? (PLAN_MONTHLY_PRICE_USD[t.planTier] ?? 0)
+      : 0;
+
+    return {
+      tenantId: t.tenantId,
+      name: t.name,
+      domain: t.domain,
+      planTier: t.planTier,
+      status: t.status,
+      deletedAt: t.deletedAt || null,
+      userCount: tenantUsers.length,
+      receiptCount: tenantReceipts.length,
+      blCount: tenantBLs.length,
+      unitCount: tenantUnits.length,
+      storageMB: tenantStorageMB,
+      lastActivityAt,
+      daysSinceLastActivity,
+      health,
+      estimatedMonthlyValue
+    };
+  });
+
+  // Estimated MRR only counts active, non-deleted tenants — a suspended or trashed tenant
+  // isn't generating revenue even if its plan tier is still "Enterprise" on paper.
+  const estimatedMRR = tenantBreakdown.reduce((sum: number, t: any) => sum + t.estimatedMonthlyValue, 0);
+
   res.json({
     totalTenants,
     totalUsers,
@@ -2676,6 +2739,8 @@ app.get("/api/admin/metrics", authMiddleware, (req: AuthenticatedRequest, res) =
     totalBLs,
     totalInvitations,
     simulatedStorageMB,
+    estimatedMRR,
+    tenantBreakdown,
     usersList: currentDB.users.map((u: any) => ({
       uid: u.uid,
       email: u.email,

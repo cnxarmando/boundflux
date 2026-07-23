@@ -26,7 +26,9 @@ import {
   Edit2,
   Clock,
   Check,
-  Copy
+  Copy,
+  DollarSign,
+  AlertCircle
 } from "lucide-react";
 
 export default function SuperadminPanel() {
@@ -437,7 +439,7 @@ export default function SuperadminPanel() {
 
         {/* Global Multi-Tenant Metrics Ribbon */}
         {metrics && (
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-6 pt-6 border-t border-white/10 text-xs">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mt-6 pt-6 border-t border-white/10 text-xs">
             <div className="bg-white/5 p-3 rounded-xl border border-white/5">
               <span className="text-slate-400 font-medium block">Total de Tenants</span>
               <span className="text-xl font-bold font-mono mt-0.5 block flex items-center gap-2 text-indigo-300">
@@ -450,6 +452,13 @@ export default function SuperadminPanel() {
               <span className="text-xl font-bold font-mono mt-0.5 block flex items-center gap-2 text-indigo-300">
                 <Users className="h-4 w-4 shrink-0 text-indigo-400" />
                 {metrics.totalUsers}
+              </span>
+            </div>
+            <div className="bg-white/5 p-3 rounded-xl border border-white/5" title="Estimativa baseada no preço de tabela do plano de cada tenant ativo. Não reflete cobrança real (sem integração de faturamento).">
+              <span className="text-slate-400 font-medium block">MRR Estimado</span>
+              <span className="text-xl font-bold font-mono mt-0.5 block flex items-center gap-2 text-emerald-400">
+                <DollarSign className="h-4 w-4 shrink-0 text-emerald-400" />
+                ${metrics.estimatedMRR?.toLocaleString("en-US") ?? 0}
               </span>
             </div>
             <div className="bg-white/5 p-3 rounded-xl border border-white/5">
@@ -656,12 +665,14 @@ export default function SuperadminPanel() {
                     <th className="py-2.5 px-2">ID</th>
                     <th className="py-2.5 px-2">Plano / Retenção</th>
                     <th className="py-2.5 px-2">Status</th>
+                    <th className="py-2.5 px-2">Uso / Saúde</th>
                     <th className="py-2.5 px-2 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {tenants.map((t) => {
                     const isEditing = editingTenant === t.tenantId;
+                    const usage = metrics?.tenantBreakdown?.find((tb: any) => tb.tenantId === t.tenantId);
                     return (
                       <tr key={t.tenantId} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
                         <td className="py-3 px-2">
@@ -753,6 +764,43 @@ export default function SuperadminPanel() {
                               <span className={`h-1 w-1 rounded-full ${t.status === "active" ? "bg-emerald-500" : "bg-red-500"}`} />
                               {t.status === "active" ? "Ativo" : "Suspenso"}
                             </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-2">
+                          {usage ? (
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2 text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                                <span title="Usuários"><Users className="h-3 w-3 inline mr-0.5 -mt-0.5" />{usage.userCount}</span>
+                                <span title="Conhecimentos de Embarque (BLs)"><Layers className="h-3 w-3 inline mr-0.5 -mt-0.5" />{usage.blCount}</span>
+                                <span title="Estimativa de receita mensal"><DollarSign className="h-3 w-3 inline mr-0.5 -mt-0.5" />{usage.estimatedMonthlyValue}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                {usage.health === "healthy" && (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400">
+                                    <span className="h-1 w-1 rounded-full bg-emerald-500" /> Ativa
+                                  </span>
+                                )}
+                                {usage.health === "quiet" && (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400">
+                                    <AlertCircle className="h-2.5 w-2.5" /> Baixa atividade
+                                  </span>
+                                )}
+                                {usage.health === "inactive" && (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                                    <AlertCircle className="h-2.5 w-2.5" /> Sem atividade
+                                  </span>
+                                )}
+                                <span className="text-[9px] text-slate-400 font-medium">
+                                  {usage.daysSinceLastActivity === null
+                                    ? "nunca"
+                                    : usage.daysSinceLastActivity === 0
+                                    ? "hoje"
+                                    : `há ${usage.daysSinceLastActivity}d`}
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-[9px] text-slate-400">—</span>
                           )}
                         </td>
                         <td className="py-3 px-2 text-right">
