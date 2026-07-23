@@ -572,7 +572,7 @@ export default function SuperadminPanel() {
                 <input
                   type="text"
                   required
-                  placeholder="Ex: EuroCargo Logistics"
+                  placeholder="Ex: Acme Logistics"
                   value={tenantName}
                   onChange={(e) => setTenantName(e.target.value)}
                   className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
@@ -590,7 +590,7 @@ export default function SuperadminPanel() {
                   <input
                     type="text"
                     required
-                    placeholder="Ex: eurocargo.com"
+                    placeholder="Ex: acme.com"
                     value={tenantDomain}
                     onChange={(e) => setTenantDomain(e.target.value)}
                     className="w-full text-xs pl-9 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
@@ -895,7 +895,7 @@ export default function SuperadminPanel() {
                   .map((log: any) => {
                     // Try to resolve tenant name
                     const tenant = tenants.find((t) => t.tenantId === log.tenantId);
-                    const tenantName = tenant ? tenant.name : "Quality Logistics";
+                    const tenantName = tenant ? tenant.name : "BoundFlux";
                     
                     // Parse name from details: e.g. "Login efetuado via Google OAuth. Nome: John Doe"
                     let userName = "N/A";
@@ -1273,7 +1273,7 @@ export default function SuperadminPanel() {
               <input
                 type="email"
                 required
-                placeholder="Ex: armando.qualitylogistics@gmail.com"
+                placeholder="Ex: owner@empresa.com"
                 value={ownerEmail}
                 onChange={(e) => setOwnerEmail(e.target.value)}
                 className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
@@ -1360,7 +1360,7 @@ export default function SuperadminPanel() {
                             </div>
                           </td>
                           <td className="py-3 px-2">
-                            <span className="font-semibold text-slate-600 dark:text-slate-350">{member.tenantName || "Quality Logistics"}</span>
+                            <span className="font-semibold text-slate-600 dark:text-slate-350">{member.tenantName || "BoundFlux"}</span>
                           </td>
                           <td className="py-3 px-2">
                             <select
@@ -1402,7 +1402,7 @@ export default function SuperadminPanel() {
                           </div>
                         </td>
                         <td className="py-3 px-2 text-slate-600 dark:text-slate-350 font-semibold">
-                          {member.tenantName || "Quality Logistics"}
+                          {member.tenantName || "BoundFlux"}
                         </td>
                         <td className="py-3 px-2">
                           {member.tenantRole === "owner" ? (
@@ -1484,7 +1484,7 @@ export default function SuperadminPanel() {
                             />
                           </td>
                           <td className="py-3 px-2">
-                            <span className="font-semibold text-slate-600 dark:text-slate-350">{invite.tenantName || "Quality Logistics"}</span>
+                            <span className="font-semibold text-slate-600 dark:text-slate-350">{invite.tenantName || "BoundFlux"}</span>
                           </td>
                           <td className="py-3 px-2">
                             <select
@@ -1533,7 +1533,7 @@ export default function SuperadminPanel() {
                           </div>
                         </td>
                         <td className="py-3 px-2 text-slate-600 dark:text-slate-350 font-semibold">
-                          {invite.tenantName || "Quality Logistics"}
+                          {invite.tenantName || "BoundFlux"}
                         </td>
                         <td className="py-3 px-2 font-mono">
                           {invite.tenantRole === "owner" ? (

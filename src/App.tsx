@@ -478,7 +478,7 @@ export default function App() {
               </div>
             ) : (
               <span className="px-2.5 py-0.5 bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400 text-[10px] font-bold rounded-full uppercase tracking-wider border border-indigo-150 dark:border-indigo-900/30">
-                🏢 {user.tenantName || "Quality Logistics"}
+                🏢 {user.tenantName || "Empresa"}
               </span>
             )}
 

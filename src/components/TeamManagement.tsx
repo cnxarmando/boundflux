@@ -420,7 +420,7 @@ export default function TeamManagement({ currentUser }: TeamManagementProps) {
           <div>
             <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider">Empresa (Tenant)</span>
             <span className="text-sm font-bold text-slate-800 dark:text-slate-100">
-              {(currentUser as any).tenantName || "Quality Logistics"}
+              {(currentUser as any).tenantName || "Empresa"}
             </span>
           </div>
         </div>

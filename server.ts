@@ -431,8 +431,8 @@ async function initDatabase() {
         loadedDb.tenants = [
           {
             tenantId: "t-1",
-            name: "Quality Logistics",
-            domain: "qualitylogistics.com",
+            name: "BoundFlux Operations",
+            domain: "boundflux.com",
             planTier: "Enterprise",
             status: "active",
             retentionDays: 30
@@ -447,8 +447,8 @@ async function initDatabase() {
           },
           {
             tenantId: "t-3",
-            name: "Quality Logistics US Branch",
-            domain: "qualitylogistics.us",
+            name: "BoundFlux US Logistics",
+            domain: "boundflux.us",
             planTier: "Enterprise",
             status: "active",
             retentionDays: 30
@@ -664,7 +664,7 @@ async function initDatabase() {
             exporter: "GRAINGER TX / APEX MFG\n201 FREEDOM DRIVE, ROANOKE, TX 76262",
             consignee: "OOS-INTERNATIONAL BV\nOOSTKAPELSEWEG 4, SEROOSKERE 4353 EH",
             notifyParty: "SAME AS CONSIGNEE",
-            forwardingAgent: "QUALITY LOGISTICS LLC\nORLANDO WAREHOUSE, FL 32824",
+            forwardingAgent: "BOUNDFLUX CARGO LLC\nMIAMI WAREHOUSE, FL 33166",
             pointOfOrigin: "ORLANDO, FL",
             domesticRouting: "BOOKING #QL-9901",
             prepaidCollect: "PREPAID",
@@ -691,7 +691,7 @@ async function initDatabase() {
             exporter: "GLOBAL SUPPLY CORP\n1200 LOGISTICS WAY, MIAMI, FL 33122",
             consignee: "NORTHEAST DISTRIBUTION HUB\n88 INTERSTATE HWY 95, BOSTON, MA",
             notifyParty: "LOGISTICS DEPT - TEL +1 555-011-9231",
-            forwardingAgent: "QUALITY LOGISTICS LLC\nORLANDO WAREHOUSE, FL 32824",
+            forwardingAgent: "BOUNDFLUX CARGO LLC\nMIAMI WAREHOUSE, FL 33166",
             pointOfOrigin: "ORLANDO, FL",
             domesticRouting: "FEDEX FREIGHT DIRECT",
             prepaidCollect: "PREPAID",
@@ -718,7 +718,7 @@ async function initDatabase() {
             exporter: "ORLANDO INDUSTRIAL EXPORTS\n404 INDUSTRIAL PKWY, ORLANDO, FL",
             consignee: "CARIBBEAN FREIGHT IMPORTS\nPORT OF SPAIN, TRINIDAD",
             notifyParty: "CARIBBEAN CUSTOMS CLEARANCE",
-            forwardingAgent: "QUALITY LOGISTICS LLC\nORLANDO WAREHOUSE, FL 32824",
+            forwardingAgent: "BOUNDFLUX CARGO LLC\nMIAMI WAREHOUSE, FL 33166",
             pointOfOrigin: "ORLANDO, FL",
             domesticRouting: "OCEAN CARGO EXPRESS",
             prepaidCollect: "COLLECT",
@@ -1148,7 +1148,7 @@ interface AuthenticatedRequest extends express.Request {
   isGlobalAdmin?: boolean;
 }
 
-// Security Middleware: Quality Logistics Single Tenant check
+// Security Middleware: Multi-tenant & Active Tenant validation
 const authMiddleware = (req: AuthenticatedRequest, res: express.Response, next: express.NextFunction) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -2707,7 +2707,7 @@ app.get("/api/admin/metrics", authMiddleware, (req: AuthenticatedRequest, res) =
       email: u.email,
       name: u.name,
       tenantId: u.tenantId,
-      tenantName: currentDB.tenants?.find((t: any) => t.tenantId === u.tenantId)?.name || "Quality Logistics",
+      tenantName: currentDB.tenants?.find((t: any) => t.tenantId === u.tenantId)?.name || "BoundFlux",
       tenantRole: u.tenantRole || "operator"
     }))
   });
@@ -3060,7 +3060,7 @@ app.get("/api/invitations/public/:id", (req, res) => {
     email: invite.email,
     tenantRole: invite.tenantRole,
     status: invite.status,
-    tenantName: tenant ? tenant.name : "Quality Logistics",
+    tenantName: tenant ? tenant.name : "BoundFlux",
     invitedBy: invite.invitedBy
   });
 });

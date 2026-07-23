@@ -154,7 +154,7 @@ export default function Dashboard({ activeUnit, currentUser, onReceiveClick }: D
       return;
     }
 
-    if (currentUser?.email === "armando.qualitylogistics@gmail.com") {
+    if (currentUser?.platformRole === "superadmin") {
       setReceiptToDelete(receipt);
       setIsDeleteModalOpen(true);
     } else {

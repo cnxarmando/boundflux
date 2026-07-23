@@ -1,6 +1,6 @@
 {
-  "name": "Quality Logistics Warehouse",
-  "description": "Responsive web application for managing and receiving warehouse cargo shipments with Gemini AI tracking extraction and Firebase integration.",
+  "name": "BoundFlux",
+  "description": "Multi-tenant cargo and warehouse operations management platform.",
   "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

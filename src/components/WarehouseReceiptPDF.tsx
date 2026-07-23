@@ -314,13 +314,13 @@ export default function WarehouseReceiptPDF({ receipt, onClose }: WarehouseRecei
                       <div className="w-3.5 h-3.5 border-2 border-white"></div>
                     </div>
                     <h1 className="text-lg font-extrabold tracking-tight text-indigo-950 uppercase font-display">
-                      Quality Logistics Solutions
+                      BoundFlux Cargo
                     </h1>
                   </div>
                   <div className="text-[10px] text-slate-700 leading-relaxed font-mono">
                     <p>8377 NW 68st, Miami, FL 33166</p>
                     <p>Tel: 954-7739908 | Fax: 954-7739909</p>
-                    <p className="text-indigo-600 font-bold">www.qualitylogistics.us</p>
+                    <p className="text-indigo-600 font-bold">www.boundflux.com</p>
                   </div>
                 </div>
 
@@ -619,7 +619,7 @@ export default function WarehouseReceiptPDF({ receipt, onClose }: WarehouseRecei
                   <p>DATE (Data): ___________________________</p>
                 </div>
                 <div className="text-right flex flex-col justify-end">
-                  <p className="font-extrabold text-[7.5px] text-slate-700">QUALITY SOLUTIONS WAREHOUSE DEPT.</p>
+                  <p className="font-extrabold text-[7.5px] text-slate-700">BOUNDFLUX WAREHOUSE DEPT.</p>
                   <p>OPERATOR ID: {receipt.operatorEmail || "SYSTEM"}</p>
                 </div>
               </div>

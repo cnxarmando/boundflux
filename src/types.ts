@@ -151,7 +151,7 @@ export interface BillOfLading {
   exporter: string; // Shipper(s) address and names block, can have multiple
   consignee: string; // Consigned to name & address block
   notifyParty: string; // Notify party name & address block
-  forwardingAgent: string; // Quality Logistics address block
+  forwardingAgent: string; // Forwarding agent address block
   pointOfOrigin: string; // Point of origin / state or FTZ number
   domesticRouting: string; // Booking etc.
   preCarriageBy?: string;
