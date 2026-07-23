@@ -450,48 +450,125 @@ export default function SuperadminPanel() {
         {/* Global Multi-Tenant Metrics Ribbon */}
         {metrics && (
           <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mt-6 pt-6 border-t border-white/10 text-xs">
-            <div className="bg-white/5 p-3 rounded-xl border border-white/5">
-              <span className="text-slate-400 font-medium block">Total de Tenants</span>
-              <span className="text-xl font-bold font-mono mt-0.5 block flex items-center gap-2 text-indigo-300">
-                <Building2 className="h-4 w-4 shrink-0 text-indigo-400" />
+            <button
+              type="button"
+              onClick={() => setActiveSubTab("tenants")}
+              className={`p-3 rounded-xl border text-left transition-all cursor-pointer group active:scale-[0.98] ${
+                activeSubTab === "tenants"
+                  ? "bg-white/15 border-indigo-400/60 shadow-inner"
+                  : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-indigo-400/40"
+              }`}
+              title="Clique para ir para a Gestão de Empresas (Tenants)"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400 font-medium block group-hover:text-slate-200 transition-colors">Total de Tenants</span>
+                <span className="text-[10px] text-indigo-300 opacity-0 group-hover:opacity-100 transition-opacity font-semibold">Ver →</span>
+              </div>
+              <span className="text-xl font-bold font-mono mt-1 block flex items-center gap-2 text-indigo-300 group-hover:text-white transition-colors">
+                <Building2 className="h-4 w-4 shrink-0 text-indigo-400 group-hover:scale-110 transition-transform" />
                 {metrics.totalTenants}
               </span>
-            </div>
-            <div className="bg-white/5 p-3 rounded-xl border border-white/5">
-              <span className="text-slate-400 font-medium block">Usuários Ativos</span>
-              <span className="text-xl font-bold font-mono mt-0.5 block flex items-center gap-2 text-indigo-300">
-                <Users className="h-4 w-4 shrink-0 text-indigo-400" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveSubTab("logins")}
+              className={`p-3 rounded-xl border text-left transition-all cursor-pointer group active:scale-[0.98] ${
+                activeSubTab === "logins"
+                  ? "bg-white/15 border-indigo-400/60 shadow-inner"
+                  : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-indigo-400/40"
+              }`}
+              title="Clique para monitorar acessos e logins de usuários"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400 font-medium block group-hover:text-slate-200 transition-colors">Usuários Ativos</span>
+                <span className="text-[10px] text-indigo-300 opacity-0 group-hover:opacity-100 transition-opacity font-semibold">Ver →</span>
+              </div>
+              <span className="text-xl font-bold font-mono mt-1 block flex items-center gap-2 text-indigo-300 group-hover:text-white transition-colors">
+                <Users className="h-4 w-4 shrink-0 text-indigo-400 group-hover:scale-110 transition-transform" />
                 {metrics.totalUsers}
               </span>
-            </div>
-            <div className="bg-white/5 p-3 rounded-xl border border-white/5" title="Estimativa baseada no preço de tabela do plano de cada tenant ativo. Não reflete cobrança real (sem integração de faturamento).">
-              <span className="text-slate-400 font-medium block">MRR Estimado</span>
-              <span className="text-xl font-bold font-mono mt-0.5 block flex items-center gap-2 text-emerald-400">
-                <DollarSign className="h-4 w-4 shrink-0 text-emerald-400" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveSubTab("tenants")}
+              className={`p-3 rounded-xl border text-left transition-all cursor-pointer group active:scale-[0.98] ${
+                activeSubTab === "tenants"
+                  ? "bg-white/15 border-emerald-400/60 shadow-inner"
+                  : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-emerald-400/40"
+              }`}
+              title="Estimativa baseada no preço de tabela do plano de cada tenant ativo. Clique para ver empresas e planos."
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400 font-medium block group-hover:text-slate-200 transition-colors">MRR Estimado</span>
+                <span className="text-[10px] text-emerald-300 opacity-0 group-hover:opacity-100 transition-opacity font-semibold">Ver →</span>
+              </div>
+              <span className="text-xl font-bold font-mono mt-1 block flex items-center gap-2 text-emerald-400 group-hover:text-emerald-300 transition-colors">
+                <DollarSign className="h-4 w-4 shrink-0 text-emerald-400 group-hover:scale-110 transition-transform" />
                 ${metrics.estimatedMRR?.toLocaleString("en-US") ?? 0}
               </span>
-            </div>
-            <div className="bg-white/5 p-3 rounded-xl border border-white/5">
-              <span className="text-slate-400 font-medium block">Recibos Emitidos</span>
-              <span className="text-xl font-bold font-mono mt-0.5 block flex items-center gap-2 text-indigo-300">
-                <Layers className="h-4 w-4 shrink-0 text-indigo-400" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveSubTab("tenants")}
+              className={`p-3 rounded-xl border text-left transition-all cursor-pointer group active:scale-[0.98] ${
+                activeSubTab === "tenants"
+                  ? "bg-white/15 border-indigo-400/60 shadow-inner"
+                  : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-indigo-400/40"
+              }`}
+              title="Clique para ver métricas e volume de recibos por empresa"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400 font-medium block group-hover:text-slate-200 transition-colors">Recibos Emitidos</span>
+                <span className="text-[10px] text-indigo-300 opacity-0 group-hover:opacity-100 transition-opacity font-semibold">Ver →</span>
+              </div>
+              <span className="text-xl font-bold font-mono mt-1 block flex items-center gap-2 text-indigo-300 group-hover:text-white transition-colors">
+                <Layers className="h-4 w-4 shrink-0 text-indigo-400 group-hover:scale-110 transition-transform" />
                 {metrics.totalReceipts}
               </span>
-            </div>
-            <div className="bg-white/5 p-3 rounded-xl border border-white/5">
-              <span className="text-slate-400 font-medium block">Uso de Storage (GCS)</span>
-              <span className="text-xl font-bold font-mono mt-0.5 block flex items-center gap-2 text-indigo-300">
-                <Database className="h-4 w-4 shrink-0 text-indigo-400" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveSubTab("tenants")}
+              className={`p-3 rounded-xl border text-left transition-all cursor-pointer group active:scale-[0.98] ${
+                activeSubTab === "tenants"
+                  ? "bg-white/15 border-indigo-400/60 shadow-inner"
+                  : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-indigo-400/40"
+              }`}
+              title="Clique para ver o detalhamento do armazenamento por tenant"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400 font-medium block group-hover:text-slate-200 transition-colors">Uso de Storage (GCS)</span>
+                <span className="text-[10px] text-indigo-300 opacity-0 group-hover:opacity-100 transition-opacity font-semibold">Ver →</span>
+              </div>
+              <span className="text-xl font-bold font-mono mt-1 block flex items-center gap-2 text-indigo-300 group-hover:text-white transition-colors">
+                <Database className="h-4 w-4 shrink-0 text-indigo-400 group-hover:scale-110 transition-transform" />
                 {metrics.simulatedStorageMB} MB
               </span>
-            </div>
-            <div className="col-span-2 md:col-span-1 bg-white/5 p-3 rounded-xl border border-white/5">
-              <span className="text-slate-400 font-medium block">Ações Auditadas</span>
-              <span className="text-xl font-bold font-mono mt-0.5 block flex items-center gap-2 text-indigo-300">
-                <Activity className="h-4 w-4 shrink-0 text-indigo-400" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveSubTab("audit")}
+              className={`col-span-2 md:col-span-1 p-3 rounded-xl border text-left transition-all cursor-pointer group active:scale-[0.98] ${
+                activeSubTab === "audit"
+                  ? "bg-white/15 border-indigo-400/60 shadow-inner"
+                  : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-indigo-400/40"
+              }`}
+              title="Clique para ir para a Auditoria Global do sistema"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400 font-medium block group-hover:text-slate-200 transition-colors">Ações Auditadas</span>
+                <span className="text-[10px] text-indigo-300 opacity-0 group-hover:opacity-100 transition-opacity font-semibold">Ver →</span>
+              </div>
+              <span className="text-xl font-bold font-mono mt-1 block flex items-center gap-2 text-indigo-300 group-hover:text-white transition-colors">
+                <Activity className="h-4 w-4 shrink-0 text-indigo-400 group-hover:scale-110 transition-transform" />
                 {auditLogs.length} logs
               </span>
-            </div>
+            </button>
           </div>
         )}
       </div>
