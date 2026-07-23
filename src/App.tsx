@@ -117,6 +117,23 @@ export default function App() {
     }
   }, []);
 
+  // Current tenant details for header and compliance
+  const [currentTenant, setCurrentTenant] = useState<any>(null);
+
+  useEffect(() => {
+    if (user) {
+      if (user.platformRole === "superadmin" && !superadminSelectedTenantId) {
+        setCurrentTenant(null);
+      } else {
+        apiService.getCurrentTenant()
+          .then(setCurrentTenant)
+          .catch(() => setCurrentTenant(null));
+      }
+    } else {
+      setCurrentTenant(null);
+    }
+  }, [user, superadminSelectedTenantId]);
+
   useEffect(() => {
     if (user && user.platformRole === "superadmin") {
       apiService.getTenants()
@@ -502,7 +519,7 @@ export default function App() {
             <div className="flex flex-col items-end">
               <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Storage TTL</span>
               <span className={`font-mono font-bold text-xs ${primaryTextDark} transition-colors duration-300`}>
-                180 Days Compliance
+                {currentTenant ? `${currentTenant.retentionDays ?? 30} Dias (${currentTenant.planTier || 'Starter'})` : user?.platformRole === "superadmin" ? "Multi-Tenant" : "30 Dias (Starter)"}
               </span>
             </div>
           </div>
@@ -710,10 +727,10 @@ export default function App() {
                   <div className="space-y-6">
                     <div>
                       <h1 className="text-xl font-bold font-display text-slate-900 dark:text-white">
-                        Extended Media Retention Rules (180-Day Compliance)
+                        Extended Media Retention Rules ({currentTenant ? `${currentTenant.retentionDays ?? 30}-Day Retention - ${currentTenant.planTier || 'Starter'} Plan` : "Dynamic Storage TTL"})
                       </h1>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                        Technical specifications, industry compliance, and cold compression logic (180 days).
+                        Technical specifications, industry compliance, and cold compression logic ({currentTenant ? `${currentTenant.retentionDays ?? 30} days for ${currentTenant.planTier || 'Starter'}` : "30-180 days based on Plan Tier"}).
                       </p>
                     </div>
 
@@ -726,7 +743,7 @@ export default function App() {
                         </h2>
                         
                         <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                          For strict compliance with logistics industry and insurance cargo dispute deadlines, we have extended the photo retention period from 10 to <strong>180 days</strong>. For cost and disk space optimization without losing traceability, we have implemented a **Cold Archiving** routine.
+                          For strict compliance with logistics industry and insurance cargo dispute deadlines, photo retention is configured per subscription plan tier ({currentTenant ? <strong>{currentTenant.retentionDays ?? 30} days for {currentTenant.planTier || 'Starter'} Plan</strong> : "from 30 to 180 days"}). For cost and disk space optimization without losing traceability, we have implemented a **Cold Archiving** routine.
                         </p>
 
                         <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl space-y-3 border border-slate-100 dark:border-slate-850">
@@ -734,7 +751,7 @@ export default function App() {
                             <span className="font-bold text-indigo-600 font-mono">01.</span>
                             <div>
                               <h4 className="font-bold text-slate-800 dark:text-white">Scan and Gzip Compression</h4>
-                              <p className="text-slate-500 dark:text-slate-400 mt-0.5">Every 12 hours, cleanup routines on the backend server identify receipt media older than 180 days, securely compress them in Gzip (.gz) format, and move the compressed file to the cold directory (<code className="font-mono bg-slate-100 dark:bg-slate-800 px-1 rounded">/uploads/archive</code>).</p>
+                              <p className="text-slate-500 dark:text-slate-400 mt-0.5">Every 12 hours, cleanup routines on the backend server identify receipt media older than {currentTenant ? `${currentTenant.retentionDays ?? 30} days` : "the company's retention limit"}, securely compress them in Gzip (.gz) format, and move the compressed file to the cold directory (<code className="font-mono bg-slate-100 dark:bg-slate-800 px-1 rounded">/uploads/archive</code>).</p>
                             </div>
                           </div>
 
@@ -750,7 +767,7 @@ export default function App() {
                         <div className="p-4 bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30 rounded-xl flex gap-3 text-xs text-indigo-700 dark:text-indigo-400">
                           <ShieldAlert className="h-5 w-5 shrink-0 mt-0.5" />
                           <div>
-                            <h4 className="font-bold">180-Day Logistics Compliance</h4>
+                            <h4 className="font-bold">{currentTenant ? `${currentTenant.retentionDays ?? 30}-Day Retention (${currentTenant.planTier || 'Starter'} Plan)` : "Logistics Compliance Policy"}</h4>
                             <p className="mt-0.5 leading-relaxed">In real logistics scenarios, cargo damage claims and disputes with insurance companies often occur months after delivery. Our local compression policy keeps evidence history protected for auditing without burdening the production server.</p>
                           </div>
                         </div>

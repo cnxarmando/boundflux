@@ -56,6 +56,11 @@ export default function TeamManagement({ currentUser }: TeamManagementProps) {
   // Active Context State (Tenant & Unit)
   const [activeUnitName, setActiveUnitName] = useState<string>("US East Hub");
   const [activeUnitRegion, setActiveUnitRegion] = useState<string>("US");
+  const [currentTenant, setCurrentTenant] = useState<any>(null);
+
+  useEffect(() => {
+    apiService.getCurrentTenant().then(setCurrentTenant).catch(() => null);
+  }, []);
 
   const isOwner = currentUser.tenantRole === "owner" || currentUser.platformRole === "superadmin";
 
@@ -448,7 +453,7 @@ export default function TeamManagement({ currentUser }: TeamManagementProps) {
           </div>
           <div className="px-2.5 py-1 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-150/10 rounded-lg text-[10px] text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1 shrink-0">
             <ShieldCheck className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
-            <span>Compliance 180D</span>
+            <span>Compliance {currentTenant?.retentionDays ?? 30}D ({currentTenant?.planTier || "Starter"})</span>
           </div>
         </div>
       </div>
