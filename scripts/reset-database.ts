@@ -57,26 +57,30 @@ async function main() {
   let totalDeleted = 0;
 
   for (const col of COLLECTIONS) {
-    const snapshot = await firestoreDb.collection(col).get();
-    const count = snapshot.size;
-    console.log(`[FIRESTORE] Coleção "${col}": ${count} documento(s) encontrado(s).`);
+    try {
+      const snapshot = await firestoreDb.collection(col).get();
+      const count = snapshot.size;
+      console.log(`[FIRESTORE] Coleção "${col}": ${count} documento(s) encontrado(s).`);
 
-    if (count === 0) continue;
+      if (count === 0) continue;
 
-    if (!CONFIRMED) {
-      console.log(`  -> (dry-run) ${count} documento(s) seriam apagados de "${col}".`);
-      continue;
-    }
+      if (!CONFIRMED) {
+        console.log(`  -> (dry-run) ${count} documento(s) seriam apagados de "${col}".`);
+        continue;
+      }
 
-    // Apaga em lotes de até 450 (limite do Firestore é 500 operações por batch)
-    const docs = snapshot.docs;
-    for (let i = 0; i < docs.length; i += 450) {
-      const batch = firestoreDb.batch();
-      const slice = docs.slice(i, i + 450);
-      slice.forEach(doc => batch.delete(doc.ref));
-      await batch.commit();
-      totalDeleted += slice.length;
-      console.log(`  -> Apagados ${slice.length} documento(s) de "${col}" (lote ${Math.floor(i / 450) + 1}).`);
+      // Apaga em lotes de até 450 (limite do Firestore é 500 operações por batch)
+      const docs = snapshot.docs;
+      for (let i = 0; i < docs.length; i += 450) {
+        const batch = firestoreDb.batch();
+        const slice = docs.slice(i, i + 450);
+        slice.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+        totalDeleted += slice.length;
+        console.log(`  -> Apagados ${slice.length} documento(s) de "${col}" (lote ${Math.floor(i / 450) + 1}).`);
+      }
+    } catch (err: any) {
+      console.warn(`[FIRESTORE AVISO] Não foi possível acessar coleção "${col}" (${err.message || err}). Continuando o reset local...`);
     }
   }
 
