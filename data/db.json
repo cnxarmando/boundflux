@@ -2,11 +2,59 @@
   "shippers": [],
   "consignees": [],
   "receipts": [],
-  "users": [],
+  "users": [
+    {
+      "uid": "umWAgsdskuYjQv8AtGYZsPgwTkA3",
+      "tenantId": null,
+      "email": "armando.qualitylogistics@gmail.com",
+      "tenantRole": null,
+      "platformRole": "superadmin",
+      "name": "Armando (Administrador)",
+      "password": "",
+      "synced": false,
+      "updatedAt": "2026-07-23T17:45:07.556Z"
+    },
+    {
+      "uid": "cnxarmando-admin",
+      "tenantId": null,
+      "email": "cnxarmando@gmail.com",
+      "tenantRole": null,
+      "platformRole": "superadmin",
+      "name": "CnxArmando",
+      "password": "",
+      "synced": false
+    }
+  ],
   "billsOfLading": [],
   "tenants": [],
   "invitations": [],
   "pendingDeletions": [],
-  "auditLog": [],
-  "units": []
+  "auditLog": [
+    {
+      "id": "audit-1784828707556-377",
+      "action": "LOGIN",
+      "resource": "auth",
+      "resourceId": "umWAgsdskuYjQv8AtGYZsPgwTkA3",
+      "tenantId": null,
+      "performedBy": "armando.qualitylogistics@gmail.com",
+      "performedByUid": "umWAgsdskuYjQv8AtGYZsPgwTkA3",
+      "timestamp": "2026-07-23T17:45:07.556Z",
+      "details": "Login efetuado via Google OAuth. Nome: Armando (Administrador)",
+      "synced": false
+    },
+    {
+      "id": "audit-1784829695507-9341",
+      "action": "LOGIN",
+      "resource": "auth",
+      "resourceId": "qnbeFExNakNxMYSIROlmyLU4MP12",
+      "tenantId": "t-1",
+      "performedBy": "mariana.qualitylogistics@gmail.com",
+      "performedByUid": "qnbeFExNakNxMYSIROlmyLU4MP12",
+      "timestamp": "2026-07-23T18:01:35.507Z",
+      "details": "Login efetuado via Google OAuth. Nome: Mariana (Dona da Quality)",
+      "synced": false
+    }
+  ],
+  "units": [],
+  "isInitialized": true
 }

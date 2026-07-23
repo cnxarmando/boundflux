@@ -48,6 +48,7 @@ interface DBStructure {
   pendingDeletions?: { collection: string; id: string }[];
   auditLog?: any[];
   units?: any[];
+  isInitialized?: boolean;
 }
 
 // Load Applet Config for Firestore
@@ -114,7 +115,16 @@ async function persistToFirestore(newDb: DBStructure) {
           );
           localDbModified = true;
         } catch (err: any) {
-          console.warn(`[FIRESTORE SYNC WARN] Failed deleting queued ${del.id} from ${del.collection} (will retry later):`, err.message || err);
+          const isPermissionError = err.message?.includes("PERMISSION_DENIED") || err.code === 7 || String(err).includes("permission");
+          if (isPermissionError) {
+            console.warn(`[FIRESTORE SYNC WARNING] Development sandbox credentials limit direct-delete to Firestore for queued ${del.id} in ${del.collection}. Removing from queue.`);
+            dbInMemory.pendingDeletions = dbInMemory.pendingDeletions.filter(
+              d => !(d.collection === del.collection && d.id === del.id)
+            );
+            localDbModified = true;
+          } else {
+            console.warn(`[FIRESTORE SYNC WARN] Failed deleting queued ${del.id} from ${del.collection} (will retry later):`, err.message || err);
+          }
         }
       }
     }
@@ -192,15 +202,14 @@ async function persistToFirestore(newDb: DBStructure) {
               console.warn(`[FIRESTORE SYNC WARNING] Development sandbox credentials limit direct-delete to Firestore for doc ${id} in ${listName}. Local-fallback db.json remains fully active.`);
             } else {
               console.error(`[FIRESTORE SYNC ERROR] Failed deleting doc ${id} from collection ${listName}:`, err.message || err);
-            }
-            
-            // Queue this deletion
-            const alreadyQueued = dbInMemory.pendingDeletions.some(
-              d => d.collection === listName && d.id === id
-            );
-            if (!alreadyQueued) {
-              dbInMemory.pendingDeletions.push({ collection: listName, id });
-              localDbModified = true;
+              // Queue this deletion only if it was NOT a permission error
+              const alreadyQueued = dbInMemory.pendingDeletions.some(
+                d => d.collection === listName && d.id === id
+              );
+              if (!alreadyQueued) {
+                dbInMemory.pendingDeletions.push({ collection: listName, id });
+                localDbModified = true;
+              }
             }
             
             // Remove from lastDbInMemory anyway since we track it in pendingDeletions queue
@@ -412,338 +421,338 @@ async function initDatabase() {
     
     let isNew = mergedSomethingLocal;
     
-    // Seed default tenants if they don't exist
-    if (!loadedDb.tenants || loadedDb.tenants.length === 0) {
-      loadedDb.tenants = [
-        {
-          tenantId: "t-1",
-          name: "Quality Logistics",
-          domain: "qualitylogistics.com",
-          planTier: "Enterprise",
-          status: "active",
-          retentionDays: 30
-        },
-        {
-          tenantId: "t-2",
-          name: "Logistic US",
-          domain: "logistic.com",
-          planTier: "Pro",
-          status: "active",
-          retentionDays: 15
-        },
-        {
-          tenantId: "t-3",
-          name: "Quality Logistics US Branch",
-          domain: "qualitylogistics.us",
-          planTier: "Enterprise",
-          status: "active",
-          retentionDays: 30
-        },
-        {
-          tenantId: "t-4",
-          name: "Starter Logistics Corp",
-          domain: "starterlog.com",
-          planTier: "Starter",
-          status: "active",
-          retentionDays: 30
-        }
-      ];
-      isNew = true;
+    // Check if database was previously initialized (has local db file or isInitialized flag)
+    const wasAlreadyInitialized = localDb.isInitialized || fs.existsSync(DB_FILE);
+
+    // Only seed default demo data on first ever initialization
+    if (!wasAlreadyInitialized) {
+      // Seed default tenants if they don't exist
+      if (!loadedDb.tenants || loadedDb.tenants.length === 0) {
+        loadedDb.tenants = [
+          {
+            tenantId: "t-1",
+            name: "Quality Logistics",
+            domain: "qualitylogistics.com",
+            planTier: "Enterprise",
+            status: "active",
+            retentionDays: 30
+          },
+          {
+            tenantId: "t-2",
+            name: "Logistic US",
+            domain: "logistic.com",
+            planTier: "Pro",
+            status: "active",
+            retentionDays: 15
+          },
+          {
+            tenantId: "t-3",
+            name: "Quality Logistics US Branch",
+            domain: "qualitylogistics.us",
+            planTier: "Enterprise",
+            status: "active",
+            retentionDays: 30
+          },
+          {
+            tenantId: "t-4",
+            name: "Starter Logistics Corp",
+            domain: "starterlog.com",
+            planTier: "Starter",
+            status: "active",
+            retentionDays: 30
+          }
+        ];
+        isNew = true;
+      }
+
+      // Seed default shippers if empty
+      if (!loadedDb.shippers || loadedDb.shippers.length === 0) {
+        loadedDb.shippers = [
+          { 
+            id: "s-1", 
+            tenantId: "t-2", 
+            name: "Global Logistics Corp", 
+            email: "shipping@global.com", 
+            phone: "+1 (555) 019-2834", 
+            address: "123 Port Side Dr, Miami, FL", 
+            createdAt: new Date().toISOString(),
+            plants: [
+              { id: "sp-1-1", name: "Planta São Paulo - SP", address: "Av. Marginal Pinheiros, 4500, São Paulo, SP", phone: "+55 (11) 4004-1234", email: "sp-plant@global.com" },
+              { id: "sp-1-2", name: "Planta Santos - SP", address: "Rua do Porto, 20, Porto de Santos, Santos, SP", phone: "+55 (13) 3211-5678", email: "santos-plant@global.com" }
+            ]
+          },
+          { 
+            id: "s-2", 
+            tenantId: "t-2", 
+            name: "Apex Manufacturing Solutions", 
+            email: "logistics@apex.com", 
+            phone: "+1 (555) 024-4481", 
+            address: "404 Industrial Pkwy, Chicago, IL", 
+            createdAt: new Date().toISOString(),
+            plants: [
+              { id: "sp-2-1", name: "Planta Extrema - MG", address: "Rodovia Fernão Dias, Km 940, Extrema, MG", phone: "+55 (35) 3435-9000", email: "extrema@apex.com" }
+            ]
+          },
+          { 
+            id: "s-3", 
+            tenantId: "t-1", 
+            name: "EuroCargo Spedition GmbH", 
+            email: "dispo@eurocargo.de", 
+            phone: "+49 89 201944", 
+            address: "Flughafenallee 15, Munich, DE", 
+            createdAt: new Date().toISOString(),
+            plants: []
+          }
+        ];
+        isNew = true;
+      }
+
+      // Seed default consignees if empty
+      if (!loadedDb.consignees || loadedDb.consignees.length === 0) {
+        loadedDb.consignees = [
+          { 
+            id: "c-1", 
+            tenantId: "t-2", 
+            name: "Northeast Distribution Hub", 
+            email: "recepcao@northeast.com", 
+            phone: "+1 (555) 011-9231", 
+            address: "88 Interstate Hwy 95, Boston, MA", 
+            createdAt: new Date().toISOString(),
+            plants: []
+          },
+          { 
+            id: "c-2", 
+            tenantId: "t-2", 
+            name: "Latin America Trade Center", 
+            email: "import@latamtrade.com", 
+            phone: "+1 (305) 555-0192", 
+            address: "246 Importadora Way, Miami, FL", 
+            createdAt: new Date().toISOString(),
+            plants: []
+          },
+          { 
+            id: "c-3", 
+            tenantId: "t-1", 
+            name: "Supermercados do Povo S.A.", 
+            email: "logistica@superpovo.com.br", 
+            phone: "+55 (11) 3456-7890", 
+            address: "Av. do Armazém, 1200, São Paulo, BR", 
+            createdAt: new Date().toISOString(),
+            plants: [
+              { id: "cp-3-1", name: "CD Guarulhos - SP", address: "Rodovia Presidente Dutra, Km 215, Guarulhos, SP", phone: "+55 (11) 2460-1100", email: "cd.guarulhos@superpovo.com.br" },
+              { id: "cp-3-2", name: "Filial Rio - RJ", address: "Av. Brasil, 15000, Rio de Janeiro, RJ", phone: "+55 (21) 3978-4400", email: "rio@superpovo.com.br" }
+            ]
+          }
+        ];
+        isNew = true;
+      }
+
+      // Seed default receipts if empty
+      if (!loadedDb.receipts || loadedDb.receipts.length === 0) {
+        loadedDb.receipts = [
+          {
+            id: "wr-1",
+            tenantId: "t-2",
+            number: "WR-11986",
+            shipperId: "s-1",
+            shipperName: "GRAINGER TX",
+            shipperAddress: "201 FREEDOM DRIVE, ROANOKE, TX 76262",
+            shipperPhone: "",
+            consigneeId: "c-2",
+            consigneeName: "OOS-INTERNATIONAL BV",
+            consigneeAddress: "OOSTKAPELSEWEG 4, SEROOSKERE 4353 EH",
+            consigneePhone: "31118726200",
+            handling: ["Commercial Invoice", "Pkg List", "Pallets"],
+            dateIn: "2026-07-09",
+            expires: "",
+            location: "A-12",
+            via: "AIR",
+            service: "",
+            carrier: "DHL",
+            origin: "MIA",
+            dest: "OOSTKAPELLE",
+            poInvoices: [
+              { poNumber: "LAM-2026-00383/1", invoiceNumber: "", amount: "" }
+            ],
+            proNumbers: "517766633412, 517766633423",
+            items: [
+              { qty: 1, type: "BOX", len: 12, wid: 10, hgt: 5, weight: 2.0, unit: "Lbs", cubic: 0.35, cubicUnit: "Cft", bin: "", location: "" },
+              { qty: 1, type: "BOX", len: 12, wid: 10, hgt: 5, weight: 1.0, unit: "Lbs", cubic: 0.35, cubicUnit: "Cft", bin: "", location: "" }
+            ],
+            totalPieces: 2,
+            totalWeightLbs: 3.0,
+            totalWeightKgs: 1.36,
+            totalVolWeightLbs: 7.23,
+            totalVolWeightKgs: 3.28,
+            totalCubicCft: 0.69,
+            totalCubicCbm: 0.02,
+            weight: 3.0,
+            volumeCount: 2,
+            trackingNumber: "517766633412, 517766633423",
+            photoUrl: "/uploads/sample_label.jpg",
+            createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+            operatorEmail: "operator@logistic.com",
+            unit: "US"
+          },
+          {
+            id: "wr-2",
+            tenantId: "t-2",
+            number: "WR-10002",
+            shipperId: "s-2",
+            shipperName: "Apex Manufacturing Solutions",
+            shipperAddress: "404 Industrial Pkwy, Chicago, IL",
+            shipperPhone: "+1 (555) 024-4481",
+            consigneeId: "c-1",
+            consigneeName: "Northeast Distribution Hub",
+            consigneeAddress: "88 Interstate Hwy 95, Boston, MA",
+            consigneePhone: "+1 (555) 011-9231",
+            handling: ["Pkg List"],
+            dateIn: "2026-07-01",
+            expires: "",
+            location: "B-03",
+            via: "TRUCK",
+            service: "",
+            carrier: "FedEx",
+            origin: "CHI",
+            dest: "BOS",
+            poInvoices: [
+              { poNumber: "PO-7781-B", invoiceNumber: "INV-990", amount: "$3,400.00" }
+            ],
+            proNumbers: "781234567890",
+            items: [
+              { qty: 1, type: "BOX", len: 24, wid: 24, hgt: 24, weight: 340.2, unit: "Lbs", cubic: 8.0, cubicUnit: "Cft", bin: "", location: "" }
+            ],
+            totalPieces: 1,
+            totalWeightLbs: 340.2,
+            totalWeightKgs: 154.31,
+            totalVolWeightLbs: 83.13,
+            totalVolWeightKgs: 37.71,
+            totalCubicCft: 8.0,
+            totalCubicCbm: 0.23,
+            weight: 340.2,
+            volumeCount: 1,
+            trackingNumber: "781234567890",
+            photoUrl: "CLEANED_UP",
+            createdAt: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
+            operatorEmail: "operator@logistic.com",
+            unit: "US"
+          }
+        ];
+        isNew = true;
+      }
+
+      // Seed default users if empty
+      if (!loadedDb.users || loadedDb.users.length === 0) {
+        loadedDb.users = [
+          { uid: "u-1", tenantId: "t-1", email: "operator@logistic.com", tenantRole: "operator", platformRole: "user", name: "Carlos Silva (Operador)", password: "password123" },
+          { uid: "u-2", tenantId: "t-1", email: "admin@logistic.com", tenantRole: "admin", platformRole: "user", name: "Marina Mendes (Gerente)", password: "password123" },
+          { uid: "armando-admin", tenantId: "t-1", email: "armando.qualitylogistics@gmail.com", tenantRole: "owner", platformRole: "superadmin", name: "Armando (Administrador)", password: "" }
+        ];
+        isNew = true;
+      }
+
+      if (!loadedDb.billsOfLading || loadedDb.billsOfLading.length === 0) {
+        const defaultUnit = (loadedDb.units && loadedDb.units.find(u => u.tenantId === "t-1"))?.id || "u-orlando-t-1";
+        loadedDb.billsOfLading = [
+          {
+            id: "bl-ql-2848",
+            tenantId: "t-1",
+            blNumber: "QL-2848",
+            documentNumber: "0000001601",
+            exportReferences: "FILE #0000001601",
+            date: "2026-07-10",
+            exporter: "GRAINGER TX / APEX MFG\n201 FREEDOM DRIVE, ROANOKE, TX 76262",
+            consignee: "OOS-INTERNATIONAL BV\nOOSTKAPELSEWEG 4, SEROOSKERE 4353 EH",
+            notifyParty: "SAME AS CONSIGNEE",
+            forwardingAgent: "QUALITY LOGISTICS LLC\nORLANDO WAREHOUSE, FL 32824",
+            pointOfOrigin: "ORLANDO, FL",
+            domesticRouting: "BOOKING #QL-9901",
+            prepaidCollect: "PREPAID",
+            marksAndNumbers: "CONTAINER #MSCU-8812901 / SEAL #99120",
+            numberOfPackages: 3,
+            grossWeightLbs: 343.2,
+            grossWeightKgs: 155.67,
+            measurementCft: 8.69,
+            measurementCbm: 0.25,
+            freightCharges: "FREIGHT PREPAID - DOOR TO DOOR",
+            receiptIds: ["wr-1", "wr-2"],
+            receiptNumbers: ["WR-11986", "WR-10002"],
+            unit: defaultUnit,
+            createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+            updatedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString()
+          },
+          {
+            id: "bl-ql-2849",
+            tenantId: "t-1",
+            blNumber: "QL-2849",
+            documentNumber: "0000001602",
+            exportReferences: "FILE #0000001602",
+            date: "2026-07-12",
+            exporter: "GLOBAL SUPPLY CORP\n1200 LOGISTICS WAY, MIAMI, FL 33122",
+            consignee: "NORTHEAST DISTRIBUTION HUB\n88 INTERSTATE HWY 95, BOSTON, MA",
+            notifyParty: "LOGISTICS DEPT - TEL +1 555-011-9231",
+            forwardingAgent: "QUALITY LOGISTICS LLC\nORLANDO WAREHOUSE, FL 32824",
+            pointOfOrigin: "ORLANDO, FL",
+            domesticRouting: "FEDEX FREIGHT DIRECT",
+            prepaidCollect: "PREPAID",
+            marksAndNumbers: "PALLET #QL-PAL-04",
+            numberOfPackages: 5,
+            grossWeightLbs: 1250.0,
+            grossWeightKgs: 566.99,
+            measurementCft: 45.0,
+            measurementCbm: 1.27,
+            freightCharges: "PREPAID",
+            receiptIds: [],
+            receiptNumbers: ["WR-11988"],
+            unit: defaultUnit,
+            createdAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
+            updatedAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString()
+          },
+          {
+            id: "bl-ql-2850",
+            tenantId: "t-1",
+            blNumber: "QL-2850",
+            documentNumber: "0000001603",
+            exportReferences: "FILE #0000001603",
+            date: "2026-07-15",
+            exporter: "ORLANDO INDUSTRIAL EXPORTS\n404 INDUSTRIAL PKWY, ORLANDO, FL",
+            consignee: "CARIBBEAN FREIGHT IMPORTS\nPORT OF SPAIN, TRINIDAD",
+            notifyParty: "CARIBBEAN CUSTOMS CLEARANCE",
+            forwardingAgent: "QUALITY LOGISTICS LLC\nORLANDO WAREHOUSE, FL 32824",
+            pointOfOrigin: "ORLANDO, FL",
+            domesticRouting: "OCEAN CARGO EXPRESS",
+            prepaidCollect: "COLLECT",
+            marksAndNumbers: "CRATE #1-2 / AES X2026071599",
+            numberOfPackages: 2,
+            grossWeightLbs: 890.5,
+            grossWeightKgs: 403.92,
+            measurementCft: 28.4,
+            measurementCbm: 0.80,
+            freightCharges: "OCEAN FREIGHT COLLECT",
+            receiptIds: [],
+            receiptNumbers: ["WR-11990"],
+            unit: defaultUnit,
+            createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+            updatedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
+          }
+        ];
+        isNew = true;
+      }
     }
 
-    // Seed default shippers if empty
-    if (!loadedDb.shippers || loadedDb.shippers.length === 0) {
-      loadedDb.shippers = [
-        { 
-          id: "s-1", 
-          tenantId: "t-2", 
-          name: "Global Logistics Corp", 
-          email: "shipping@global.com", 
-          phone: "+1 (555) 019-2834", 
-          address: "123 Port Side Dr, Miami, FL", 
-          createdAt: new Date().toISOString(),
-          plants: [
-            { id: "sp-1-1", name: "Planta São Paulo - SP", address: "Av. Marginal Pinheiros, 4500, São Paulo, SP", phone: "+55 (11) 4004-1234", email: "sp-plant@global.com" },
-            { id: "sp-1-2", name: "Planta Santos - SP", address: "Rua do Porto, 20, Porto de Santos, Santos, SP", phone: "+55 (13) 3211-5678", email: "santos-plant@global.com" }
-          ]
-        },
-        { 
-          id: "s-2", 
-          tenantId: "t-2", 
-          name: "Apex Manufacturing Solutions", 
-          email: "logistics@apex.com", 
-          phone: "+1 (555) 024-4481", 
-          address: "404 Industrial Pkwy, Chicago, IL", 
-          createdAt: new Date().toISOString(),
-          plants: [
-            { id: "sp-2-1", name: "Planta Extrema - MG", address: "Rodovia Fernão Dias, Km 940, Extrema, MG", phone: "+55 (35) 3435-9000", email: "extrema@apex.com" }
-          ]
-        },
-        { 
-          id: "s-3", 
-          tenantId: "t-1", 
-          name: "EuroCargo Spedition GmbH", 
-          email: "dispo@eurocargo.de", 
-          phone: "+49 89 201944", 
-          address: "Flughafenallee 15, Munich, DE", 
-          createdAt: new Date().toISOString(),
-          plants: []
-        }
-      ];
-      isNew = true;
-    }
-
-    // Seed default consignees if empty
-    if (!loadedDb.consignees || loadedDb.consignees.length === 0) {
-      loadedDb.consignees = [
-        { 
-          id: "c-1", 
-          tenantId: "t-2", 
-          name: "Northeast Distribution Hub", 
-          email: "recepcao@northeast.com", 
-          phone: "+1 (555) 011-9231", 
-          address: "88 Interstate Hwy 95, Boston, MA", 
-          createdAt: new Date().toISOString(),
-          plants: []
-        },
-        { 
-          id: "c-2", 
-          tenantId: "t-2", 
-          name: "Latin America Trade Center", 
-          email: "import@latamtrade.com", 
-          phone: "+1 (305) 555-0192", 
-          address: "246 Importadora Way, Miami, FL", 
-          createdAt: new Date().toISOString(),
-          plants: []
-        },
-        { 
-          id: "c-3", 
-          tenantId: "t-1", 
-          name: "Supermercados do Povo S.A.", 
-          email: "logistica@superpovo.com.br", 
-          phone: "+55 (11) 3456-7890", 
-          address: "Av. do Armazém, 1200, São Paulo, BR", 
-          createdAt: new Date().toISOString(),
-          plants: [
-            { id: "cp-3-1", name: "CD Guarulhos - SP", address: "Rodovia Presidente Dutra, Km 215, Guarulhos, SP", phone: "+55 (11) 2460-1100", email: "cd.guarulhos@superpovo.com.br" },
-            { id: "cp-3-2", name: "Filial Rio - RJ", address: "Av. Brasil, 15000, Rio de Janeiro, RJ", phone: "+55 (21) 3978-4400", email: "rio@superpovo.com.br" }
-          ]
-        }
-      ];
-      isNew = true;
-    }
-
-    // Seed default receipts if empty
-    if (!loadedDb.receipts || loadedDb.receipts.length === 0) {
-      loadedDb.receipts = [
-        {
-          id: "wr-1",
-          tenantId: "t-2",
-          number: "WR-11986",
-          shipperId: "s-1",
-          shipperName: "GRAINGER TX",
-          shipperAddress: "201 FREEDOM DRIVE, ROANOKE, TX 76262",
-          shipperPhone: "",
-          consigneeId: "c-2",
-          consigneeName: "OOS-INTERNATIONAL BV",
-          consigneeAddress: "OOSTKAPELSEWEG 4, SEROOSKERE 4353 EH",
-          consigneePhone: "31118726200",
-          handling: ["Commercial Invoice", "Pkg List", "Pallets"],
-          dateIn: "2026-07-09",
-          expires: "",
-          location: "A-12",
-          via: "AIR",
-          service: "",
-          carrier: "DHL",
-          origin: "MIA",
-          dest: "OOSTKAPELLE",
-          poInvoices: [
-            { poNumber: "LAM-2026-00383/1", invoiceNumber: "", amount: "" }
-          ],
-          proNumbers: "517766633412, 517766633423",
-          items: [
-            { qty: 1, type: "BOX", len: 12, wid: 10, hgt: 5, weight: 2.0, unit: "Lbs", cubic: 0.35, cubicUnit: "Cft", bin: "", location: "" },
-            { qty: 1, type: "BOX", len: 12, wid: 10, hgt: 5, weight: 1.0, unit: "Lbs", cubic: 0.35, cubicUnit: "Cft", bin: "", location: "" }
-          ],
-          totalPieces: 2,
-          totalWeightLbs: 3.0,
-          totalWeightKgs: 1.36,
-          totalVolWeightLbs: 7.23,
-          totalVolWeightKgs: 3.28,
-          totalCubicCft: 0.69,
-          totalCubicCbm: 0.02,
-          weight: 3.0,
-          volumeCount: 2,
-          trackingNumber: "517766633412, 517766633423",
-          photoUrl: "/uploads/sample_label.jpg",
-          createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-          operatorEmail: "operator@logistic.com",
-          unit: "US"
-        },
-        {
-          id: "wr-2",
-          tenantId: "t-2",
-          number: "WR-10002",
-          shipperId: "s-2",
-          shipperName: "Apex Manufacturing Solutions",
-          shipperAddress: "404 Industrial Pkwy, Chicago, IL",
-          shipperPhone: "+1 (555) 024-4481",
-          consigneeId: "c-1",
-          consigneeName: "Northeast Distribution Hub",
-          consigneeAddress: "88 Interstate Hwy 95, Boston, MA",
-          consigneePhone: "+1 (555) 011-9231",
-          handling: ["Pkg List"],
-          dateIn: "2026-07-01",
-          expires: "",
-          location: "B-03",
-          via: "TRUCK",
-          service: "",
-          carrier: "FedEx",
-          origin: "CHI",
-          dest: "BOS",
-          poInvoices: [
-            { poNumber: "PO-7781-B", invoiceNumber: "INV-990", amount: "$3,400.00" }
-          ],
-          proNumbers: "781234567890",
-          items: [
-            { qty: 1, type: "BOX", len: 24, wid: 24, hgt: 24, weight: 340.2, unit: "Lbs", cubic: 8.0, cubicUnit: "Cft", bin: "", location: "" }
-          ],
-          totalPieces: 1,
-          totalWeightLbs: 340.2,
-          totalWeightKgs: 154.31,
-          totalVolWeightLbs: 83.13,
-          totalVolWeightKgs: 37.71,
-          totalCubicCft: 8.0,
-          totalCubicCbm: 0.23,
-          weight: 340.2,
-          volumeCount: 1,
-          trackingNumber: "781234567890",
-          photoUrl: "CLEANED_UP",
-          createdAt: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
-          operatorEmail: "operator@logistic.com",
-          unit: "US"
-        }
-      ];
-      isNew = true;
-    }
-
-    // Seed default users if empty
-    if (!loadedDb.users || loadedDb.users.length === 0) {
-      loadedDb.users = [
-        { uid: "u-1", tenantId: "t-1", email: "operator@logistic.com", tenantRole: "operator", platformRole: "user", name: "Carlos Silva (Operador)", password: "password123" },
-        { uid: "u-2", tenantId: "t-1", email: "admin@logistic.com", tenantRole: "admin", platformRole: "user", name: "Marina Mendes (Gerente)", password: "password123" },
-        { uid: "armando-admin", tenantId: "t-1", email: "armando.qualitylogistics@gmail.com", tenantRole: "owner", platformRole: "superadmin", name: "Armando (Administrador)", password: "" }
-      ];
-      isNew = true;
-    }
-
-    if (!loadedDb.billsOfLading || loadedDb.billsOfLading.length === 0) {
-      const defaultUnit = (loadedDb.units && loadedDb.units.find(u => u.tenantId === "t-1"))?.id || "u-orlando-t-1";
-      loadedDb.billsOfLading = [
-        {
-          id: "bl-ql-2848",
-          tenantId: "t-1",
-          blNumber: "QL-2848",
-          documentNumber: "0000001601",
-          exportReferences: "FILE #0000001601",
-          date: "2026-07-10",
-          exporter: "GRAINGER TX / APEX MFG\n201 FREEDOM DRIVE, ROANOKE, TX 76262",
-          consignee: "OOS-INTERNATIONAL BV\nOOSTKAPELSEWEG 4, SEROOSKERE 4353 EH",
-          notifyParty: "SAME AS CONSIGNEE",
-          forwardingAgent: "QUALITY LOGISTICS LLC\nORLANDO WAREHOUSE, FL 32824",
-          pointOfOrigin: "ORLANDO, FL",
-          domesticRouting: "BOOKING #QL-9901",
-          prepaidCollect: "PREPAID",
-          marksAndNumbers: "CONTAINER #MSCU-8812901 / SEAL #99120",
-          numberOfPackages: 3,
-          grossWeightLbs: 343.2,
-          grossWeightKgs: 155.67,
-          measurementCft: 8.69,
-          measurementCbm: 0.25,
-          freightCharges: "FREIGHT PREPAID - DOOR TO DOOR",
-          receiptIds: ["wr-1", "wr-2"],
-          receiptNumbers: ["WR-11986", "WR-10002"],
-          unit: defaultUnit,
-          createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-          updatedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString()
-        },
-        {
-          id: "bl-ql-2849",
-          tenantId: "t-1",
-          blNumber: "QL-2849",
-          documentNumber: "0000001602",
-          exportReferences: "FILE #0000001602",
-          date: "2026-07-12",
-          exporter: "GLOBAL SUPPLY CORP\n1200 LOGISTICS WAY, MIAMI, FL 33122",
-          consignee: "NORTHEAST DISTRIBUTION HUB\n88 INTERSTATE HWY 95, BOSTON, MA",
-          notifyParty: "LOGISTICS DEPT - TEL +1 555-011-9231",
-          forwardingAgent: "QUALITY LOGISTICS LLC\nORLANDO WAREHOUSE, FL 32824",
-          pointOfOrigin: "ORLANDO, FL",
-          domesticRouting: "FEDEX FREIGHT DIRECT",
-          prepaidCollect: "PREPAID",
-          marksAndNumbers: "PALLET #QL-PAL-04",
-          numberOfPackages: 5,
-          grossWeightLbs: 1250.0,
-          grossWeightKgs: 566.99,
-          measurementCft: 45.0,
-          measurementCbm: 1.27,
-          freightCharges: "PREPAID",
-          receiptIds: [],
-          receiptNumbers: ["WR-11988"],
-          unit: defaultUnit,
-          createdAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
-          updatedAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString()
-        },
-        {
-          id: "bl-ql-2850",
-          tenantId: "t-1",
-          blNumber: "QL-2850",
-          documentNumber: "0000001603",
-          exportReferences: "FILE #0000001603",
-          date: "2026-07-15",
-          exporter: "ORLANDO INDUSTRIAL EXPORTS\n404 INDUSTRIAL PKWY, ORLANDO, FL",
-          consignee: "CARIBBEAN FREIGHT IMPORTS\nPORT OF SPAIN, TRINIDAD",
-          notifyParty: "CARIBBEAN CUSTOMS CLEARANCE",
-          forwardingAgent: "QUALITY LOGISTICS LLC\nORLANDO WAREHOUSE, FL 32824",
-          pointOfOrigin: "ORLANDO, FL",
-          domesticRouting: "OCEAN CARGO EXPRESS",
-          prepaidCollect: "COLLECT",
-          marksAndNumbers: "CRATE #1-2 / AES X2026071599",
-          numberOfPackages: 2,
-          grossWeightLbs: 890.5,
-          grossWeightKgs: 403.92,
-          measurementCft: 28.4,
-          measurementCbm: 0.80,
-          freightCharges: "OCEAN FREIGHT COLLECT",
-          receiptIds: [],
-          receiptNumbers: ["WR-11990"],
-          unit: defaultUnit,
-          createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          updatedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
-        }
-      ];
-      isNew = true;
-    }
-
-    // Ensure ALL items have tenantId: "t-1" (Migration to single tenant for Quality Logistics)
+    // Ensure plants array exists on all shippers and consignees
     let needsSync = false;
-    loadedDb.shippers = loadedDb.shippers.map(s => {
+    loadedDb.shippers = (loadedDb.shippers || []).map(s => {
       let changed = false;
-      if (s.tenantId !== "t-1") { s.tenantId = "t-1"; changed = true; }
       if (!s.plants) { s.plants = []; changed = true; }
       if (changed) { needsSync = true; }
       return s;
     });
-    loadedDb.consignees = loadedDb.consignees.map(c => {
+    loadedDb.consignees = (loadedDb.consignees || []).map(c => {
       let changed = false;
-      if (c.tenantId !== "t-1") { c.tenantId = "t-1"; changed = true; }
       if (!c.plants) { c.plants = []; changed = true; }
       if (changed) { needsSync = true; }
       return c;
-    });
-    loadedDb.receipts = loadedDb.receipts.map(r => {
-      if (r.tenantId !== "t-1") { r.tenantId = "t-1"; needsSync = true; }
-      return r;
     });
     // Migrate tenants retentionDays
     if (loadedDb.tenants) {
@@ -781,28 +790,14 @@ async function initDatabase() {
       });
     }
 
-    // Make sure Mariana, Armando, and CnxArmando exist and have correct fields
-    const hasMariana = loadedDb.users.some(u => u.email.toLowerCase() === "mariana.qualitylogistics@gmail.com");
-    if (!hasMariana) {
-      loadedDb.users.push({
-        uid: "mariana-owner",
-        tenantId: "t-1",
-        email: "mariana.qualitylogistics@gmail.com",
-        tenantRole: "owner",
-        platformRole: "user",
-        name: "Mariana (Dona da Quality)",
-        password: ""
-      });
-      needsSync = true;
-    }
-
+    // Make sure CnxArmando platform superadmin exists and has correct fields
     const hasCnxArmando = loadedDb.users.some(u => u.email.toLowerCase() === "cnxarmando@gmail.com");
     if (!hasCnxArmando) {
       loadedDb.users.push({
         uid: "cnxarmando-admin",
-        tenantId: "t-1",
+        tenantId: null,
         email: "cnxarmando@gmail.com",
-        tenantRole: "owner",
+        tenantRole: null,
         platformRole: "superadmin",
         name: "CnxArmando",
         password: ""
@@ -831,10 +826,6 @@ async function initDatabase() {
         if (u.tenantRole !== null) { u.tenantRole = null; changed = true; }
         if (u.tenantId !== null && u.tenantId !== undefined) { u.tenantId = null; changed = true; }
         if (u.platformRole !== "superadmin") { u.platformRole = "superadmin"; changed = true; }
-      } else if (emailLower === "mariana.qualitylogistics@gmail.com") {
-        if (u.tenantRole !== "owner") { u.tenantRole = "owner"; changed = true; }
-        if (u.platformRole !== "user") { u.platformRole = "user"; changed = true; }
-        if (u.tenantId !== "t-1") { u.tenantId = "t-1"; changed = true; }
       } else {
         if (!u.tenantRole) {
           u.tenantRole = u.role === "admin" ? "admin" : "operator";
@@ -854,15 +845,23 @@ async function initDatabase() {
       if (changed) { needsSync = true; }
       return u;
     });
-    if (loadedDb.billsOfLading) {
-      loadedDb.billsOfLading = loadedDb.billsOfLading.map(b => {
-        if (b.tenantId !== "t-1") { b.tenantId = "t-1"; needsSync = true; }
-        return b;
-      });
+
+    // Clean up any orphaned non-superadmin users whose tenant no longer exists in loadedDb.tenants
+    const activeTenantIds = new Set((loadedDb.tenants || []).map((t: any) => t.tenantId));
+    const userCountBefore = loadedDb.users.length;
+    loadedDb.users = loadedDb.users.filter((u: any) => {
+      if (u.platformRole === "superadmin") return true;
+      return u.tenantId && activeTenantIds.has(u.tenantId);
+    });
+    if (loadedDb.users.length !== userCountBefore) {
+      needsSync = true;
     }
+
     if (needsSync) {
       isNew = true;
     }
+
+    loadedDb.isInitialized = true;
 
     // Populate the global in-memory DB (maintaining identical object reference)
     Object.assign(dbInMemory, loadedDb);
@@ -1176,7 +1175,20 @@ const authMiddleware = (req: AuthenticatedRequest, res: express.Response, next: 
     // stays unset; routes that need tenant scoping already require a real selection.
     req.tenantId = req.headers["x-selected-tenant-id"] ? String(req.headers["x-selected-tenant-id"]) : undefined;
   } else {
-    req.tenantId = user.tenantId || "t-1";
+    if (!user.tenantId) {
+      res.status(403).json({ error: "Acesso Proibido: Sua conta não está vinculada a nenhuma empresa." });
+      return;
+    }
+    const tenant = (currentDB.tenants || []).find((t: any) => t.tenantId === user.tenantId);
+    if (!tenant) {
+      res.status(403).json({ error: "Acesso Proibido: A empresa associada a esta conta foi excluída ou purgada do sistema." });
+      return;
+    }
+    if (tenant.deletedAt) {
+      res.status(403).json({ error: "Acesso Proibido: Esta empresa foi desativada e está na lixeira." });
+      return;
+    }
+    req.tenantId = user.tenantId;
   }
 
   next();
@@ -1437,11 +1449,10 @@ app.post("/api/auth/google", (req, res) => {
   let user = currentDB.users.find(u => u.email.toLowerCase() === emailLower);
 
   if (!user) {
-    // Se não existir, verificar se é superadmin, Mariana (owner) ou se possui convite pendente
+    // Se não existir, verificar se é superadmin ou se possui convite pendente/empresa por domínio
     const isSuper = emailLower === "armando.qualitylogistics@gmail.com" || emailLower === "cnxarmando@gmail.com";
-    const isMariana = emailLower === "mariana.qualitylogistics@gmail.com";
     
-    let resolvedTenantId: string | null = "t-1";
+    let resolvedTenantId: string | null = null;
     let resolvedTenantRole: TenantRole | null = "operator";
     let platformRole: PlatformRole = null;
     let invitationToUpdate: any = null;
@@ -1449,14 +1460,10 @@ app.post("/api/auth/google", (req, res) => {
     if (isSuper) {
       // Platform superadmins are staff, not employees of any client company — they must
       // never be tied to a specific tenant, or purging/deleting that tenant would also
-      // delete the superadmin's own account (this happened once, see incident notes).
+      // delete the superadmin's own account.
       resolvedTenantId = null;
       resolvedTenantRole = null;
       platformRole = "superadmin";
-    } else if (isMariana) {
-      resolvedTenantId = "t-1";
-      resolvedTenantRole = "owner";
-      platformRole = null;
     } else {
       // Procurar convites ativos
       if (!currentDB.invitations) currentDB.invitations = [];
@@ -1487,15 +1494,15 @@ app.post("/api/auth/google", (req, res) => {
         platformRole = null;
         invitationToUpdate = invitation;
       } else {
-        // Fallback check: does this user's email match a tenant's domain/email exactly?
-        const matchingTenant = currentDB.tenants?.find(t => t.domain && t.domain.toLowerCase() === emailLower);
+        // Fallback check: does this user's email match an active tenant's domain/email exactly?
+        const matchingTenant = currentDB.tenants?.find(t => t.domain && t.domain.toLowerCase() === emailLower && !t.deletedAt);
         if (matchingTenant) {
           resolvedTenantId = matchingTenant.tenantId;
           resolvedTenantRole = "owner";
           platformRole = null;
         } else {
           res.status(403).json({
-            error: "Acesso Proibido: Seu e-mail não está pré-autorizado ou convidado. Por favor, entre em contato com o proprietário do sistema ou com o dono da empresa para receber um convite por link."
+            error: "Acesso Proibido: Seu e-mail não está cadastrado nem possui convite ativo. Se sua empresa foi excluída, o acesso é negado."
           });
           return;
         }
@@ -1576,10 +1583,8 @@ app.post("/api/auth/google", (req, res) => {
     
     if (isSuper) {
       if (user.platformRole !== "superadmin") { user.platformRole = "superadmin"; changed = true; }
-      if (user.tenantRole !== "owner") { user.tenantRole = "owner"; changed = true; }
-    } else if (emailLower === "mariana.qualitylogistics@gmail.com") {
-      if (user.tenantRole !== "owner") { user.tenantRole = "owner"; changed = true; }
-      if (user.platformRole !== null) { user.platformRole = null; changed = true; }
+      if (user.tenantRole !== null) { user.tenantRole = null; changed = true; }
+      if (user.tenantId !== null) { user.tenantId = null; changed = true; }
     }
 
     if (changed) {
@@ -1588,10 +1593,21 @@ app.post("/api/auth/google", (req, res) => {
     }
   }
 
-  const tenant = currentDB.tenants?.find(t => t.tenantId === user.tenantId);
-  if (tenant && tenant.deletedAt && user.platformRole !== "superadmin") {
-    res.status(403).json({ error: "Esta empresa foi excluída e seus dados estão programados para expurgo definitivo em 30 dias. Por favor, entre em contato com o administrador." });
-    return;
+  // Strictly block non-superadmins if their tenant is missing or deleted
+  if (user.platformRole !== "superadmin") {
+    if (!user.tenantId) {
+      res.status(403).json({ error: "Acesso Proibido: Sua conta não está vinculada a nenhuma empresa ativa." });
+      return;
+    }
+    const tenant = currentDB.tenants?.find(t => t.tenantId === user.tenantId);
+    if (!tenant) {
+      res.status(403).json({ error: "Acesso Proibido: A empresa associada a esta conta foi excluída ou purgada do sistema." });
+      return;
+    }
+    if (tenant.deletedAt) {
+      res.status(403).json({ error: "Esta empresa foi excluída e seus dados estão na lixeira. Por favor, entre em contato com o administrador." });
+      return;
+    }
   }
 
   // Audit Log
