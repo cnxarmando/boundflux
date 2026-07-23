@@ -2951,7 +2951,11 @@ app.post("/api/admin/platform/reset-all-tenants", authMiddleware, requirePlatfor
   currentDB.consignees = [];
   currentDB.receipts = [];
   currentDB.billsOfLading = [];
-  currentDB.users = [];
+  // Platform superadmins are staff, not tenant data — a full platform reset must never
+  // delete their own accounts, or every superadmin (including whoever just clicked this
+  // button) would be locked out immediately after, same failure mode as the original
+  // single-tenant purge incident. Keep only superadmin users.
+  currentDB.users = (currentDB.users || []).filter(u => u.platformRole === "superadmin");
   currentDB.invitations = [];
   currentDB.units = [];
   currentDB.tenants = [];
