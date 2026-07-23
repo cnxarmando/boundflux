@@ -1,0 +1,67 @@
+name: Automated Cloud Run CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  lint-and-build:
+    name: 1. Code Quality & Build Verification
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: TypeScript Lint Check
+        run: npm run lint
+
+      - name: Build Application Assets
+        run: npm run build
+
+  deploy-cloud-run:
+    name: 2. Build & Deploy Container to Cloud Run
+    needs: lint-and-build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Authorize Docker for Google Artifact Registry
+        run: gcloud auth configure-docker us-east5-docker.pkg.dev --quiet
+
+      - name: Build and Push Container Image
+        run: |
+          IMAGE_TAG="us-east5-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/warehouse-app/app:${{ github.sha }}"
+          docker build -t $IMAGE_TAG .
+          docker push $IMAGE_TAG
+
+      - name: Deploy Image to Cloud Run Service
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: warehouse-cargo-app
+          region: us-east5
+          image: us-east5-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/warehouse-app/app:${{ github.sha }}
+          flags: '--allow-unauthenticated --port=3000'

@@ -1,0 +1,211 @@
+{
+  "entities": {
+    "Tenant": {
+      "title": "Tenant",
+      "description": "Represents a SaaS Tenant company.",
+      "type": "object",
+      "properties": {
+        "tenantId": { "type": "string", "description": "Unique tenant ID." },
+        "name": { "type": "string", "maxLength": 100 },
+        "domain": { "type": "string", "maxLength": 100 },
+        "planTier": { "type": "string", "enum": ["Starter", "Pro", "Enterprise"] },
+        "status": { "type": "string", "enum": ["active", "suspended"] },
+        "customRetentionDays": { "type": "number" }
+      },
+      "required": ["tenantId", "name", "domain", "planTier", "status"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Represents a user account's profile information.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "maxLength": 256 },
+        "tenantRole": { "type": "string", "enum": ["operator", "admin", "owner"] },
+        "name": { "type": "string", "maxLength": 150 },
+        "tenantId": { "type": "string" }
+      },
+      "required": ["uid", "email", "tenantRole", "name", "tenantId"]
+    },
+    "Shipper": {
+      "title": "Shipper",
+      "description": "Information about cargo shippers.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "tenantId": { "type": "string" },
+        "name": { "type": "string", "maxLength": 150 },
+        "email": { "type": "string", "maxLength": 150 },
+        "phone": { "type": "string", "maxLength": 50 },
+        "address": { "type": "string", "maxLength": 300 },
+        "createdAt": { "type": "string" },
+        "plants": { "type": "array" }
+      },
+      "required": ["id", "tenantId", "name", "createdAt"]
+    },
+    "Consignee": {
+      "title": "Consignee",
+      "description": "Information about cargo consignees.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "tenantId": { "type": "string" },
+        "name": { "type": "string", "maxLength": 150 },
+        "email": { "type": "string", "maxLength": 150 },
+        "phone": { "type": "string", "maxLength": 50 },
+        "address": { "type": "string", "maxLength": 300 },
+        "createdAt": { "type": "string" },
+        "plants": { "type": "array" }
+      },
+      "required": ["id", "tenantId", "name", "createdAt"]
+    },
+    "WarehouseReceipt": {
+      "title": "WarehouseReceipt",
+      "description": "Cargo Warehouse Receipt record.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "number": { "type": "string", "maxLength": 32 },
+        "shipperId": { "type": "string" },
+        "shipperName": { "type": "string", "maxLength": 150 },
+        "shipperAddress": { "type": "string", "maxLength": 300 },
+        "shipperPhone": { "type": "string", "maxLength": 50 },
+        "consigneeId": { "type": "string" },
+        "consigneeName": { "type": "string", "maxLength": 150 },
+        "consigneeAddress": { "type": "string", "maxLength": 300 },
+        "consigneePhone": { "type": "string", "maxLength": 50 },
+        "handling": { "type": "array" },
+        "dateIn": { "type": "string" },
+        "expires": { "type": "string" },
+        "location": { "type": "string", "maxLength": 50 },
+        "via": { "type": "string", "maxLength": 20 },
+        "service": { "type": "string", "maxLength": 50 },
+        "carrier": { "type": "string", "maxLength": 100 },
+        "origin": { "type": "string", "maxLength": 10 },
+        "dest": { "type": "string", "maxLength": 10 },
+        "poInvoices": { "type": "array" },
+        "proNumbers": { "type": "string", "maxLength": 150 },
+        "items": { "type": "array" },
+        "totalPieces": { "type": "number" },
+        "totalWeightLbs": { "type": "number" },
+        "totalWeightKgs": { "type": "number" },
+        "totalVolWeightLbs": { "type": "number" },
+        "totalVolWeightKgs": { "type": "number" },
+        "totalCubicCft": { "type": "number" },
+        "totalCubicCbm: ": { "type": "number" },
+        "weight": { "type": "number" },
+        "volumeCount": { "type": "number" },
+        "trackingNumber": { "type": "string" },
+        "photoUrl": { "type": "string", "maxLength": 1024 },
+        "photoUrls": { "type": "array" },
+        "comments": { "type": "string", "maxLength": 1000 },
+        "cargoCondition": { 
+          "type": "string", 
+          "enum": ["No seal", "No seal on side", "blurry seal", "blurry seal on side", "broken pallet", "broken seal", "plastic", "fumigated"],
+          "description": "Optional condition check for received cargo."
+        },
+        "createdAt": { "type": "string" },
+        "operatorEmail": { "type": "string", "maxLength": 150 },
+        "unit": { "type": "string", "enum": ["US", "Europe"] },
+        "tenantId": { "type": "string" }
+      },
+      "required": ["id", "number", "shipperId", "consigneeId", "items", "createdAt", "tenantId"]
+    },
+    "BillOfLading": {
+      "title": "BillOfLading",
+      "description": "Bill of Lading document.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "tenantId": { "type": "string" },
+        "blNumber": { "type": "string", "maxLength": 32 },
+        "documentNumber": { "type": "string", "maxLength": 32 },
+        "exportReferences": { "type": "string", "maxLength": 100 },
+        "date": { "type": "string" },
+        "exporter": { "type": "string", "maxLength": 1000 },
+        "consignee": { "type": "string", "maxLength": 1000 },
+        "notifyParty": { "type": "string", "maxLength": 1000 },
+        "forwardingAgent": { "type": "string", "maxLength": 1000 },
+        "pointOfOrigin": { "type": "string", "maxLength": 150 },
+        "domesticRouting": { "type": "string", "maxLength": 300 },
+        "preCarriageBy": { "type": "string", "maxLength": 100 },
+        "placeOfReceipt": { "type": "string", "maxLength": 100 },
+        "exportingCarrier": { "type": "string", "maxLength": 100 },
+        "portOfLoading": { "type": "string", "maxLength": 100 },
+        "foreignPortOfUnloading": { "type": "string", "maxLength": 100 },
+        "placeOfDelivery": { "type": "string", "maxLength": 100 },
+        "loadingPier": { "type": "string", "maxLength": 100 },
+        "typeOfMove": { "type": "string", "maxLength": 100 },
+        "prepaidCollect": { "type": "string", "enum": ["PREPAID", "COLLECT"] },
+        "marksAndNumbers": { "type": "string", "maxLength": 500 },
+        "numberOfPackages": { "type": "number" },
+        "descriptionOfCommodities": { "type": "string", "maxLength": 3000 },
+        "grossWeightLbs": { "type": "number" },
+        "grossWeightKgs": { "type": "number" },
+        "measurementCft": { "type": "number" },
+        "measurementCbm": { "type": "number" },
+        "receiptIds": { "type": "array" },
+        "receiptNumbers": { "type": "array" },
+        "freightCharges": { "type": "string", "maxLength": 1000 },
+        "declaredValue": { "type": "string", "maxLength": 100 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "unit": { "type": "string", "enum": ["US", "Europe"] }
+      },
+      "required": ["id", "blNumber", "documentNumber", "date", "exporter", "consignee", "receiptIds", "createdAt", "tenantId"]
+    },
+    "Unit": {
+      "title": "Unit",
+      "description": "Represents a branch or warehouse unit.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "tenantId": { "type": "string" },
+        "name": { "type": "string", "maxLength": 150 },
+        "region": { "type": "string", "enum": ["US", "EU"] },
+        "unitSystem": { "type": "string", "enum": ["imperial", "metric"] },
+        "theme": {
+          "type": "object",
+          "properties": {
+            "primary": { "type": "string", "maxLength": 50 },
+            "accent": { "type": "string", "maxLength": 50 }
+          },
+          "required": ["primary", "accent"]
+        },
+        "createdAt": { "type": "string" },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["id", "tenantId", "name", "region", "unitSystem", "theme", "createdAt", "isActive"]
+    }
+  },
+  "firestore": {
+    "/tenants/{tenantId}": {
+      "schema": "Tenant",
+      "description": "Contains information about registered company tenants."
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Profiles for authenticated users."
+    },
+    "/units/{unitId}": {
+      "schema": "Unit",
+      "description": "Registered units/branches for tenants."
+    },
+    "/shippers/{shipperId}": {
+      "schema": "Shipper",
+      "description": "Shippers registered for a tenant."
+    },
+    "/consignees/{consigneeId}": {
+      "schema": "Consignee",
+      "description": "Consignees registered for a tenant."
+    },
+    "/receipts/{receiptId}": {
+      "schema": "WarehouseReceipt",
+      "description": "Warehouse receipts records."
+    },
+    "/billsOfLading/{billOfLadingId}": {
+      "schema": "BillOfLading",
+      "description": "Bills of Lading generated for cargo."
+    }
+  }
+}

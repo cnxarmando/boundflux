@@ -1,0 +1,207 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 1. Global Safety Net: Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    // Reusable, Hardened Global Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function getUserTenantId() {
+      return getUserData().tenantId;
+    }
+    
+    function isTenantUser(tenantId) {
+      return isSignedIn() && (getUserTenantId() == tenantId || getUserData().platformRole == 'superadmin');
+    }
+    
+    function isAdmin() {
+      return isSignedIn() && (getUserData().tenantRole == 'admin' || getUserData().tenantRole == 'owner' || isGlobalAdmin());
+    }
+    
+    function isGlobalAdmin() {
+      return isSignedIn() && getUserData().platformRole == 'superadmin';
+    }
+
+    function isOwnerOfTenant(tenantId) {
+      return isSignedIn() && (
+        getUserData().tenantRole == 'owner' && getUserTenantId() == tenantId
+      );
+    }
+    
+    function isSuperadmin() {
+      return isGlobalAdmin();
+    }
+    
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    
+    function incoming() {
+      return request.resource.data;
+    }
+    
+    function existing() {
+      return resource.data;
+    }
+    
+    // Validation Blueprints
+    function isValidTenant(data) {
+      return data.keys().hasAll(['tenantId', 'name', 'domain', 'planTier', 'status'])
+        && data.keys().size() >= 5
+        && data.tenantId is string && data.tenantId.size() <= 64
+        && data.name is string && data.name.size() <= 100
+        && data.domain is string && data.domain.size() <= 100
+        && data.planTier is string && (data.planTier == 'Starter' || data.planTier == 'Pro' || data.planTier == 'Enterprise')
+        && data.status is string && (data.status == 'active' || data.status == 'suspended');
+    }
+    
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'email', 'tenantRole', 'name', 'tenantId'])
+        && data.keys().size() >= 5
+        && data.uid is string && data.uid.size() <= 128
+        && data.email is string && data.email.size() <= 256
+        && data.tenantRole is string && (data.tenantRole == 'operator' || data.tenantRole == 'admin' || data.tenantRole == 'owner')
+        && data.name is string && data.name.size() <= 150
+        && data.tenantId is string && data.tenantId.size() <= 64;
+    }
+    
+    function isValidShipper(data) {
+      return data.keys().hasAll(['id', 'tenantId', 'name', 'createdAt'])
+        && data.keys().size() >= 4
+        && data.id is string && data.id.size() <= 128
+        && data.tenantId is string && data.tenantId.size() <= 64
+        && data.name is string && data.name.size() <= 150
+        && data.createdAt is string && data.createdAt.size() <= 64;
+    }
+    
+    function isValidConsignee(data) {
+      return data.keys().hasAll(['id', 'tenantId', 'name', 'createdAt'])
+        && data.keys().size() >= 4
+        && data.id is string && data.id.size() <= 128
+        && data.tenantId is string && data.tenantId.size() <= 64
+        && data.name is string && data.name.size() <= 150
+        && data.createdAt is string && data.createdAt.size() <= 64;
+    }
+    
+    function isValidWarehouseReceipt(data) {
+      return data.keys().hasAll(['id', 'number', 'shipperId', 'consigneeId', 'items', 'createdAt', 'tenantId'])
+        && data.keys().size() >= 7
+        && data.id is string && data.id.size() <= 128
+        && data.number is string && data.number.size() <= 32
+        && data.shipperId is string && data.shipperId.size() <= 128
+        && data.consigneeId is string && data.consigneeId.size() <= 128
+        && data.items is list && data.items.size() <= 200
+        && data.createdAt is string && data.createdAt.size() <= 64
+        && data.tenantId is string && data.tenantId.size() <= 64;
+    }
+    
+    function isValidBillOfLading(data) {
+      return data.keys().hasAll(['id', 'blNumber', 'documentNumber', 'date', 'exporter', 'consignee', 'receiptIds', 'createdAt', 'tenantId'])
+        && data.keys().size() >= 9
+        && data.id is string && data.id.size() <= 128
+        && data.blNumber is string && data.blNumber.size() <= 32
+        && data.documentNumber is string && data.documentNumber.size() <= 32
+        && data.date is string && data.date.size() <= 32
+        && data.exporter is string && data.exporter.size() <= 1000
+        && data.consignee is string && data.consignee.size() <= 1000
+        && data.receiptIds is list && data.receiptIds.size() <= 100
+        && data.createdAt is string && data.createdAt.size() <= 64
+        && data.tenantId is string && data.tenantId.size() <= 64;
+    }
+
+    function isValidUnit(data) {
+      return data.keys().hasAll(['id', 'tenantId', 'name', 'region', 'unitSystem', 'theme', 'createdAt', 'isActive'])
+        && data.keys().size() >= 8
+        && data.id is string && data.id.size() <= 128
+        && data.tenantId is string && data.tenantId.size() <= 64
+        && data.name is string && data.name.size() <= 150
+        && data.region is string && (data.region == 'US' || data.region == 'EU')
+        && data.unitSystem is string && (data.unitSystem == 'imperial' || data.unitSystem == 'metric')
+        && data.theme is map
+        && data.theme.primary is string && data.theme.primary.size() <= 50
+        && data.theme.accent is string && data.theme.accent.size() <= 50
+        && data.createdAt is string && data.createdAt.size() <= 64
+        && data.isActive is bool;
+    }
+
+    // MATCH BLOCKS FOR ALL COLLECTIONS
+    
+    // 1. Tenants Collection
+    match /tenants/{tenantId} {
+      allow read: if isSignedIn();
+      allow write: if isGlobalAdmin();
+    }
+    
+    // 2. Users Collection
+    match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || getUserTenantId() == resource.data.tenantId || isGlobalAdmin());
+      allow create: if isSignedIn() && (request.auth.uid == userId || isGlobalAdmin()) && isValidUserProfile(incoming());
+      allow update: if isSignedIn() && (
+        isGlobalAdmin() || (
+          request.auth.uid == userId
+          && isValidUserProfile(incoming())
+          && incoming().tenantRole == existing().tenantRole
+          && incoming().tenantId == existing().tenantId
+        )
+      );
+      allow delete: if isGlobalAdmin();
+    }
+    
+    // 3. Shippers Collection
+    match /shippers/{shipperId} {
+      allow read: if isTenantUser(resource.data.tenantId);
+      allow create: if isTenantUser(incoming().tenantId) && isValidShipper(incoming());
+      allow update: if isTenantUser(existing().tenantId) && isTenantUser(incoming().tenantId) && isValidShipper(incoming()) && incoming().createdAt == existing().createdAt;
+      allow delete: if isSuperadmin() || isOwnerOfTenant(existing().tenantId);
+    }
+    
+    // 4. Consignees Collection
+    match /consignees/{consigneeId} {
+      allow read: if isTenantUser(resource.data.tenantId);
+      allow create: if isTenantUser(incoming().tenantId) && isValidConsignee(incoming());
+      allow update: if isTenantUser(existing().tenantId) && isTenantUser(incoming().tenantId) && isValidConsignee(incoming()) && incoming().createdAt == existing().createdAt;
+      allow delete: if isSuperadmin() || isOwnerOfTenant(existing().tenantId);
+    }
+    
+    // 5. Receipts Collection
+    match /receipts/{receiptId} {
+      allow read: if isTenantUser(resource.data.tenantId);
+      allow create: if isTenantUser(incoming().tenantId) && isValidWarehouseReceipt(incoming());
+      allow update: if isTenantUser(existing().tenantId) && isTenantUser(incoming().tenantId) && isValidWarehouseReceipt(incoming()) && incoming().createdAt == existing().createdAt;
+      allow delete: if isSuperadmin() || isOwnerOfTenant(existing().tenantId);
+    }
+    
+    // 6. Bills of Lading Collection
+    match /billsOfLading/{billOfLadingId} {
+      allow read: if isTenantUser(resource.data.tenantId);
+      allow create: if isTenantUser(incoming().tenantId) && isValidBillOfLading(incoming());
+      allow update: if isTenantUser(existing().tenantId) && isTenantUser(incoming().tenantId) && isValidBillOfLading(incoming()) && incoming().createdAt == existing().createdAt;
+      allow delete: if isSuperadmin() || isOwnerOfTenant(existing().tenantId);
+    }
+
+    // 7. Audit Log Collection
+    match /auditLog/{logId} {
+      allow read: if isSuperadmin() || isOwnerOfTenant(resource.data.tenantId);
+      allow create: if isSignedIn();
+      allow update, delete: if false;
+    }
+
+    // 8. Units Collection
+    match /units/{unitId} {
+      allow read: if isTenantUser(resource.data.tenantId);
+      allow create: if (isSuperadmin() || isOwnerOfTenant(incoming().tenantId)) && isValidUnit(incoming());
+      allow update: if (isSuperadmin() || isOwnerOfTenant(existing().tenantId)) && (isSuperadmin() || isOwnerOfTenant(incoming().tenantId)) && isValidUnit(incoming()) && incoming().createdAt == existing().createdAt;
+      allow delete: if isSuperadmin() || isOwnerOfTenant(existing().tenantId);
+    }
+  }
+}
