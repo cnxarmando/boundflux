@@ -133,7 +133,7 @@ export default function SuperadminPanel() {
         domain: tenantDomain.toLowerCase(),
         planTier: tenantPlan,
         status: "active",
-        customRetentionDays: retentionDays ? Number(retentionDays) : 30
+        retentionDays: retentionDays ? Number(retentionDays) : 30
       });
       
       setSuccess(`Empresa "${newTenant.name}" cadastrada com sucesso!`);
@@ -159,7 +159,7 @@ export default function SuperadminPanel() {
         domain: editDomain,
         planTier: editPlan,
         status: editStatus,
-        customRetentionDays: editRetention ? Number(editRetention) : 30
+        retentionDays: editRetention ? Number(editRetention) : 30
       });
       setSuccess("Configurações da empresa atualizadas com sucesso!");
       setEditingTenant(null);

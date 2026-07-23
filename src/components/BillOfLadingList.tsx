@@ -112,7 +112,7 @@ export default function BillOfLadingList({ activeUnit, currentUser }: BillOfLadi
         duration: 10000,
         undoAction: async () => {
           try {
-            await apiService.restoreResource("billsOfLading", id);
+            await apiService.restoreResource("bls", id);
             await loadBLs();
             addToast({
               type: "success",

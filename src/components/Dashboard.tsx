@@ -345,7 +345,7 @@ export default function Dashboard({ activeUnit, currentUser, onReceiveClick }: D
 
   const isOld = (dateStr: string) => {
     const createdTime = new Date(dateStr).getTime();
-    const planDays = currentTenant?.customRetentionDays !== undefined ? currentTenant.customRetentionDays : 180;
+    const planDays = currentTenant?.retentionDays !== undefined ? currentTenant.retentionDays : 180;
     const limitMs = Date.now() - planDays * 24 * 60 * 60 * 1000;
     return createdTime < limitMs;
   };
@@ -761,7 +761,7 @@ export default function Dashboard({ activeUnit, currentUser, onReceiveClick }: D
                       <td className="py-4 px-4">
                         <div className="flex flex-col gap-1.5">
                           {cleanedUp ? (
-                            <div className="flex items-center gap-1 text-slate-400" title={`Photo compressed and archived after the retention limit of ${currentTenant?.customRetentionDays !== undefined ? currentTenant.customRetentionDays : 180} days.`}>
+                            <div className="flex items-center gap-1 text-slate-400" title={`Photo compressed and archived after the retention limit of ${currentTenant?.retentionDays !== undefined ? currentTenant.retentionDays : 180} days.`}>
                               <Clock className="h-3.5 w-3.5 text-amber-500" />
                               <span className="text-[10px]">Archived</span>
                             </div>
@@ -897,7 +897,7 @@ export default function Dashboard({ activeUnit, currentUser, onReceiveClick }: D
                     </div>
                     <h4 className="text-sm font-bold text-slate-800 dark:text-white">Compressed & Archived Photo</h4>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-                      In compliance with the extended retention of {currentTenant?.customRetentionDays !== undefined ? currentTenant.customRetentionDays : 180} days for cargo claims, this photo has been compressed (Gzip) and moved to secure cold-storage to save space.
+                      In compliance with the extended retention of {currentTenant?.retentionDays !== undefined ? currentTenant.retentionDays : 180} days for cargo claims, this photo has been compressed (Gzip) and moved to secure cold-storage to save space.
                     </p>
                   </div>
                 ) : (

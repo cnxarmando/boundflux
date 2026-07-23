@@ -991,7 +991,7 @@ function runLocalCleanup() {
 
   currentDB.receipts = currentDB.receipts.map(receipt => {
     const tenant = currentDB.tenants?.find(t => t.tenantId === receipt.tenantId);
-    const retentionDays = tenant?.retentionDays ?? tenant?.customRetentionDays ?? 180;
+    const retentionDays = tenant?.retentionDays ?? 180;
     const cutoffMs = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
     const createdTime = new Date(receipt.createdAt).getTime();
     
@@ -1473,7 +1473,7 @@ app.post("/api/auth/google", (req, res) => {
 
       if (invitation) {
         resolvedTenantId = invitation.tenantId;
-        resolvedTenantRole = invitation.role;
+        resolvedTenantRole = invitation.tenantRole;
         platformRole = null;
         invitationToUpdate = invitation;
       } else {
@@ -1542,8 +1542,8 @@ app.post("/api/auth/google", (req, res) => {
         user.tenantId = invitation.tenantId;
         changed = true;
       }
-      if (user.tenantRole !== invitation.role) {
-        user.tenantRole = invitation.role;
+      if (user.tenantRole !== invitation.tenantRole) {
+        user.tenantRole = invitation.tenantRole;
         changed = true;
       }
       invitation.status = "accepted";
@@ -2680,7 +2680,7 @@ app.post("/api/admin/tenants", authMiddleware, (req: AuthenticatedRequest, res) 
     return;
   }
   
-  const { name, domain, planTier, status, retentionDays, customRetentionDays } = req.body;
+  const { name, domain, planTier, status, retentionDays } = req.body;
   if (!name || !domain) {
     res.status(400).json({ error: "Nome e domínio são campos obrigatórios." });
     return;
@@ -2695,7 +2695,7 @@ app.post("/api/admin/tenants", authMiddleware, (req: AuthenticatedRequest, res) 
     return;
   }
 
-  const daysVal = retentionDays !== undefined ? Number(retentionDays) : (customRetentionDays !== undefined ? Number(customRetentionDays) : 30);
+  const daysVal = retentionDays !== undefined ? Number(retentionDays) : 30;
 
   const newTenant = {
     tenantId: `t-${Date.now()}`,
@@ -2721,7 +2721,7 @@ app.put("/api/admin/tenants/:tenantId", authMiddleware, (req: AuthenticatedReque
   }
 
   const { tenantId } = req.params;
-  const { name, domain, planTier, status, retentionDays, customRetentionDays } = req.body;
+  const { name, domain, planTier, status, retentionDays } = req.body;
 
   const currentDB = loadDB();
   if (!currentDB.tenants) currentDB.tenants = [];
@@ -2733,8 +2733,7 @@ app.put("/api/admin/tenants/:tenantId", authMiddleware, (req: AuthenticatedReque
   }
 
   const tenant = currentDB.tenants[tenantIndex];
-  const inputDays = retentionDays !== undefined ? retentionDays : customRetentionDays;
-  const daysVal = inputDays !== undefined ? (inputDays === "" ? undefined : Number(inputDays)) : (tenant.retentionDays ?? 30);
+  const daysVal = retentionDays !== undefined ? (retentionDays === "" ? undefined : Number(retentionDays)) : (tenant.retentionDays ?? 30);
 
   const updatedTenant = {
     ...tenant,
