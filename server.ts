@@ -644,8 +644,8 @@ async function initDatabase() {
       // Seed default users if empty
       if (!loadedDb.users || loadedDb.users.length === 0) {
         loadedDb.users = [
-          { uid: "u-1", tenantId: "t-1", email: "operator@logistic.com", tenantRole: "operator", platformRole: "user", name: "Carlos Silva (Operador)", password: "password123" },
-          { uid: "u-2", tenantId: "t-1", email: "admin@logistic.com", tenantRole: "admin", platformRole: "user", name: "Marina Mendes (Gerente)", password: "password123" },
+          { uid: "u-1", tenantId: "t-1", email: "operator@logistic.com", tenantRole: "operator", platformRole: "user", name: "Carlos Silva (Operador)", password: "" },
+          { uid: "u-2", tenantId: "t-1", email: "admin@logistic.com", tenantRole: "admin", platformRole: "user", name: "Marina Mendes (Gerente)", password: "" },
           { uid: "armando-admin", tenantId: "t-1", email: "armando.qualitylogistics@gmail.com", tenantRole: "owner", platformRole: "superadmin", name: "Armando (Administrador)", password: "" }
         ];
         isNew = true;
@@ -837,6 +837,12 @@ async function initDatabase() {
         }
       }
       
+      // Auto migration: Zero out any insecure magic password123 stored in DB/Firestore
+      if (u.password === "password123") {
+        u.password = "";
+        changed = true;
+      }
+
       if (u.role !== undefined) {
         delete u.role;
         changed = true;
@@ -1362,18 +1368,25 @@ app.post("/api/auth/login", (req, res) => {
   }
   
   const currentDB = loadDB();
-  let user = currentDB.users.find(u => u.email.toLowerCase() === email.toLowerCase());
+  const user = currentDB.users.find(u => u.email.toLowerCase() === email.toLowerCase());
   
-  if (user && user.password === password) {
-    const tenant = currentDB.tenants?.find(t => t.tenantId === user.tenantId);
-    if (tenant && tenant.deletedAt && user.platformRole !== "superadmin") {
-      res.status(403).json({ error: "Esta empresa foi excluída e seus dados estão programados para expurgo definitivo em 30 dias. Por favor, entre em contato com o administrador." });
-      return;
+  if (user && user.password && user.password.trim() !== "" && user.password === password) {
+    // Validate tenant status for non-superadmin accounts
+    if (user.platformRole !== "superadmin") {
+      if (!user.tenantId) {
+        res.status(403).json({ error: "Acesso Proibido: Sua conta não está vinculada a nenhuma empresa." });
+        return;
+      }
+      const tenant = currentDB.tenants?.find(t => t.tenantId === user.tenantId);
+      if (!tenant) {
+        res.status(403).json({ error: "Acesso Proibido: A empresa associada a esta conta não existe ou foi excluída." });
+        return;
+      }
+      if (tenant.deletedAt) {
+        res.status(403).json({ error: "Esta empresa foi excluída e seus dados estão na lixeira. Por favor, entre em contato com o administrador." });
+        return;
+      }
     }
-    if (!user.tenantId) {
-      user.tenantId = "t-1";
-    }
-    saveDB(currentDB);
 
     // Audit Log
     if (!currentDB.auditLog) currentDB.auditLog = [];
@@ -1382,7 +1395,7 @@ app.post("/api/auth/login", (req, res) => {
       action: "LOGIN",
       resource: "auth",
       resourceId: user.uid,
-      tenantId: user.tenantId,
+      tenantId: user.tenantId || null,
       performedBy: user.email,
       timestamp: new Date().toISOString(),
       details: `Login efetuado via e-mail/senha. Nome: ${user.name}`
@@ -1392,46 +1405,7 @@ app.post("/api/auth/login", (req, res) => {
     const { password: _, ...profile } = user;
     res.json({ user: profile, token: `mock-jwt-token-${profile.uid}` });
   } else {
-    // Auto-create/migrate operator@logistic.com and admin@logistic.com to t-1
-    if ((email.toLowerCase() === "operator@logistic.com" || email.toLowerCase() === "admin@logistic.com") && password === "password123") {
-      if (!user) {
-        user = {
-          uid: email.toLowerCase() === "admin@logistic.com" ? "u-2" : "u-1",
-          tenantId: "t-1",
-          email: email.toLowerCase(),
-          name: email.toLowerCase() === "admin@logistic.com" ? "Marina Mendes (Gerente)" : "Carlos Silva (Operador)",
-          tenantRole: email.toLowerCase() === "admin@logistic.com" ? "admin" : "operator",
-          password: "password123",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-        currentDB.users.push(user);
-      } else {
-        user.tenantId = "t-1";
-        user.password = "password123";
-        user.updatedAt = new Date().toISOString();
-      }
-      saveDB(currentDB);
-
-      // Audit Log
-      if (!currentDB.auditLog) currentDB.auditLog = [];
-      currentDB.auditLog.push({
-        id: `audit-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
-        action: "LOGIN",
-        resource: "auth",
-        resourceId: user.uid,
-        tenantId: user.tenantId,
-        performedBy: user.email,
-        timestamp: new Date().toISOString(),
-        details: `Login efetuado via e-mail/senha (Auto-Criado). Nome: ${user.name}`
-      });
-      saveDB(currentDB);
-
-      const { password: _, ...profile } = user;
-      res.json({ user: profile, token: `mock-jwt-token-${profile.uid}` });
-    } else {
-      res.status(401).json({ error: "Credenciais inválidas. Use operator@logistic.com / password123 ou admin@logistic.com / password123" });
-    }
+    res.status(401).json({ error: "E-mail ou senha incorretos." });
   }
 });
 
