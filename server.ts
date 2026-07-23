@@ -3134,7 +3134,15 @@ app.post("/api/invitations", authMiddleware, (req: AuthenticatedRequest, res) =>
   // Remove existing pending invitations for this email to avoid duplicates
   currentDB.invitations = currentDB.invitations.filter(i => !(i.email.toLowerCase() === emailLower && i.status === "pending"));
 
-  const targetTenantId = isSuper ? (req.body.tenantId || req.tenantId || "t-1") : req.tenantId;
+  // Do NOT default to "t-1" here. A superadmin sending an invite without an explicit
+  // tenantId (in the request body or via the "Company:" selector) must get an error, not
+  // have the invite silently attached to whichever tenant happens to be "t-1" — that's the
+  // same hardcoded-fallback pattern already fixed elsewhere (auth/login, authMiddleware).
+  const targetTenantId = isSuper ? (req.body.tenantId || req.tenantId || null) : req.tenantId;
+  if (!targetTenantId) {
+    res.status(400).json({ error: "Selecione a empresa (tenant) de destino para este convite." });
+    return;
+  }
 
   const targetRole = tenantRole || role;
   const resolvedRole = targetRole === "owner" ? "owner" : (targetRole === "admin" ? "admin" : "operator");

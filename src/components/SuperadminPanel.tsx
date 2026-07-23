@@ -53,6 +53,7 @@ export default function SuperadminPanel() {
   const [tenantDomain, setTenantDomain] = useState("");
   const [tenantPlan, setTenantPlan] = useState<"Starter" | "Pro" | "Enterprise">("Starter");
   const [retentionDays, setRetentionDays] = useState<string>("30");
+  const [newTenantOwnerEmail, setNewTenantOwnerEmail] = useState("");
 
   // Owner form states
   const [ownerEmail, setOwnerEmail] = useState("");
@@ -147,12 +148,31 @@ export default function SuperadminPanel() {
         status: "active",
         retentionDays: retentionDays ? Number(retentionDays) : 30
       });
-      
-      setSuccess(`Empresa "${newTenant.name}" cadastrada com sucesso!`);
+
       setTenantName("");
       setTenantDomain("");
       setTenantPlan("Starter");
       setRetentionDays("30");
+
+      // If an owner e-mail was provided, chain the invitation creation right after —
+      // this is a second, independent API call, so if it fails the tenant itself still
+      // exists (it isn't rolled back); we surface that clearly instead of losing the tenant.
+      const ownerEmailTrimmed = newTenantOwnerEmail.trim();
+      if (ownerEmailTrimmed) {
+        try {
+          const invite = await apiService.createInvitation(ownerEmailTrimmed, "owner", newTenant.tenantId);
+          const inviteUrl = `${window.location.origin}/?invite=${invite.id}`;
+          navigator.clipboard.writeText(inviteUrl);
+          setSuccess(`Empresa "${newTenant.name}" cadastrada e convite do proprietário gerado (copiado para a área de transferência)!\nE-mail: ${ownerEmailTrimmed}\nLink de onboarding: ${inviteUrl}`);
+          setNewTenantOwnerEmail("");
+        } catch (inviteErr: any) {
+          setSuccess(`Empresa "${newTenant.name}" cadastrada com sucesso.`);
+          setError(`A empresa foi criada, mas o convite do proprietário falhou: ${inviteErr.message || "erro desconhecido"}. Use a aba "Owners" para gerar o convite manualmente.`);
+        }
+      } else {
+        setSuccess(`Empresa "${newTenant.name}" cadastrada com sucesso!`);
+      }
+
       fetchData();
     } catch (err: any) {
       setError(err.message || "Erro ao criar empresa.");
@@ -725,6 +745,22 @@ export default function SuperadminPanel() {
                     <option value="180">180 Dias Compliance</option>
                   </select>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                  E-mail do Proprietário (Opcional)
+                </label>
+                <input
+                  type="email"
+                  placeholder="Ex: owner@acme.com"
+                  value={newTenantOwnerEmail}
+                  onChange={(e) => setNewTenantOwnerEmail(e.target.value)}
+                  className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                />
+                <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">
+                  Se preenchido, já gera e copia o link de convite do proprietário assim que a empresa for criada — sem precisar ir na aba "Owners" separadamente.
+                </p>
               </div>
 
               <button
