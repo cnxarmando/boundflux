@@ -7,6 +7,7 @@ import DataIntegrityInspector from "./DataIntegrityInspector";
 import ImageWithFallback from "./ImageWithFallback";
 import ItemLabelPrintModal from "./ItemLabelPrintModal";
 import AuditTrailModal from "./AuditTrailModal";
+import { normalizeUnitMatch } from "../utils/dataAuditor";
 import { 
   Search, 
   Filter, 
@@ -33,7 +34,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 
 interface OperatorDashboardProps {
-  activeUnit: 'US' | 'Europe';
+  activeUnit: string;
   currentUser: UserProfile;
   onReceiveClick: () => void;
 }
@@ -80,8 +81,8 @@ export default function OperatorDashboard({ activeUnit, currentUser, onReceiveCl
       setLoading(true);
       setError("");
       const [receiptData, blData, tenantData, unitData] = await Promise.all([
-        apiService.getReceipts(),
-        apiService.getBLs().catch(() => []),
+        apiService.getReceipts(activeUnit),
+        apiService.getBLs(activeUnit).catch(() => []),
         apiService.getCurrentTenant().catch(() => null),
         apiService.getUnits().catch(() => [])
       ]);
@@ -128,18 +129,7 @@ export default function OperatorDashboard({ activeUnit, currentUser, onReceiveCl
 
   const receiptsOfUnit = receipts.filter(r => {
     if (r.unitId && r.unitId === activeUnit) return true;
-    const rUnit = r.unit || "US";
-    if (rUnit === activeUnit) return true;
-    const currentUnit = units.find(u => u.id === activeUnit);
-    if (currentUnit) {
-      if (rUnit === "US" && (currentUnit.region === "US" || currentUnit.unitSystem === "imperial" || currentUnit.name.toLowerCase().includes("orlando"))) return true;
-      if (rUnit === "Europe" && (currentUnit.region === "EU" || currentUnit.unitSystem === "metric")) return true;
-      if (rUnit === currentUnit.name || rUnit === currentUnit.id || rUnit === currentUnit.region) return true;
-    }
-    if (activeUnit === "US" || activeUnit.startsWith("u-orlando")) {
-      if (rUnit === "US" || !rUnit || rUnit === "Orlando") return true;
-    }
-    return false;
+    return normalizeUnitMatch(r.unit, activeUnit, units);
   });
 
   const filteredReceipts = receiptsOfUnit.filter(r => {
@@ -933,6 +923,7 @@ export default function OperatorDashboard({ activeUnit, currentUser, onReceiveCl
       {labelReceipt && (
         <ItemLabelPrintModal
           receipt={labelReceipt}
+          tenantName={currentTenant?.name}
           onClose={() => setLabelReceipt(null)}
         />
       )}

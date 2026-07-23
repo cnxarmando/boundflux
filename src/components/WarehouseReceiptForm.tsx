@@ -29,7 +29,7 @@ interface WarehouseReceiptFormProps {
   currentUser: UserProfile | null;
   onSuccess: () => void;
   existingReceipt?: WarehouseReceipt;
-  activeUnit: 'US' | 'Europe';
+  activeUnit: string;
 }
 
 const HANDLING_OPTIONS = [

@@ -227,5 +227,16 @@ export interface Unit {
   createdAt: string;
   isActive: boolean;
   deletedAt?: string | null;
+  // Operational identity used to populate Bill of Lading forms and shipping labels.
+  // Optional so existing units keep working without requiring immediate backfill.
+  forwardingAgentName?: string;
+  forwardingAgentAddress?: string;
+  defaultPointOfOrigin?: string;
+  defaultPlaceOfReceipt?: string;
+  defaultPortOfLoading?: string;
+  defaultForeignPortOfUnloading?: string;
+  defaultPlaceOfDelivery?: string;
+  defaultLoadingPier?: string;
+  defaultExportingCarrier?: string;
+  blNumberPrefix?: string;
 }
-

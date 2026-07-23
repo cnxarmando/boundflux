@@ -3,7 +3,7 @@ import { Shipper, Consignee, WarehouseReceipt, UserProfile, Unit } from "../type
 const API_BASE = "";
 
 // Helper to get headers
-function getHeaders(): HeadersInit {
+function getHeaders(unitId?: string): HeadersInit {
   const token = localStorage.getItem("warehouse_token");
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -14,6 +14,9 @@ function getHeaders(): HeadersInit {
   const selectedTenant = localStorage.getItem("superadmin_selected_tenant_id");
   if (selectedTenant) {
     headers["X-Selected-Tenant-Id"] = selectedTenant;
+  }
+  if (unitId) {
+    headers["x-unit-id"] = unitId;
   }
   return headers as HeadersInit;
 }
@@ -166,9 +169,9 @@ export const apiService = {
   },
 
   // 4. Warehouse Receipts
-  async getReceipts(): Promise<WarehouseReceipt[]> {
+  async getReceipts(unitId?: string): Promise<WarehouseReceipt[]> {
     const res = await fetch(`${API_BASE}/api/receipts`, {
-      headers: getHeaders(),
+      headers: getHeaders(unitId),
     });
     if (!res.ok) throw new Error("Falha ao carregar Warehouse Receipts");
     return res.json();
@@ -254,9 +257,9 @@ export const apiService = {
   },
 
   // 7. Bills of Lading (BL)
-  async getBLs(): Promise<any[]> {
+  async getBLs(unitId?: string): Promise<any[]> {
     const res = await fetch(`${API_BASE}/api/bls`, {
-      headers: getHeaders(),
+      headers: getHeaders(unitId),
     });
     if (!res.ok) throw new Error("Falha ao carregar Bills of Lading (BL)");
     return res.json();
@@ -589,4 +592,3 @@ export const apiService = {
     return res.json();
   },
 };
-

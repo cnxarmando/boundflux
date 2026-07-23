@@ -1660,28 +1660,12 @@ app.put("/api/shippers/:id", authMiddleware, (req: AuthenticatedRequest, res) =>
 app.get("/api/units", authMiddleware, (req: AuthenticatedRequest, res) => {
   const currentDB = loadDB();
   if (!currentDB.units) currentDB.units = [];
-  let filtered = currentDB.units.filter((u: any) => u.tenantId === req.tenantId && !u.deletedAt);
+  const filtered = currentDB.units.filter((u: any) => u.tenantId === req.tenantId && !u.deletedAt);
 
-  if (filtered.length === 0) {
-    const tenantId = req.tenantId || "t-1";
-    const defaultUnit = {
-      id: `u-orlando-${tenantId}`,
-      tenantId: tenantId,
-      name: "Orlando Warehouse",
-      region: "US",
-      unitSystem: "imperial",
-      theme: {
-        primary: "#4f46e5",
-        accent: "#06b6d4"
-      },
-      createdAt: new Date().toISOString(),
-      isActive: true
-    };
-    currentDB.units.unshift(defaultUnit);
-    saveDB(currentDB);
-    filtered = [defaultUnit];
-  }
-
+  // No auto-created default unit here: a tenant with zero units simply gets an empty
+  // list, and the frontend falls back to the generic Imperial/Metric toggle until the
+  // owner registers their first real unit. Fabricating a persisted "default" unit here
+  // used to hardcode a specific customer's warehouse for every new tenant.
   res.json(filtered);
 });
 
@@ -1721,7 +1705,12 @@ app.get("/api/audit/data-integrity", authMiddleware, (req: AuthenticatedRequest,
 });
 
 app.post("/api/units", authMiddleware, requireTenantRole(["owner"]), (req: AuthenticatedRequest, res) => {
-  const { name, region, theme, unitSystem } = req.body;
+  const {
+    name, region, theme, unitSystem,
+    forwardingAgentName, forwardingAgentAddress, defaultPointOfOrigin,
+    defaultPlaceOfReceipt, defaultPortOfLoading, defaultForeignPortOfUnloading,
+    defaultPlaceOfDelivery, defaultLoadingPier, defaultExportingCarrier, blNumberPrefix
+  } = req.body;
   if (!name || !region || !theme || !theme.primary || !theme.accent) {
     res.status(400).json({ error: "Nome, região e tema com cores primária e de acento são obrigatórios." });
     return;
@@ -1740,6 +1729,16 @@ app.post("/api/units", authMiddleware, requireTenantRole(["owner"]), (req: Authe
       primary: theme.primary,
       accent: theme.accent
     },
+    forwardingAgentName: forwardingAgentName || undefined,
+    forwardingAgentAddress: forwardingAgentAddress || undefined,
+    defaultPointOfOrigin: defaultPointOfOrigin || undefined,
+    defaultPlaceOfReceipt: defaultPlaceOfReceipt || undefined,
+    defaultPortOfLoading: defaultPortOfLoading || undefined,
+    defaultForeignPortOfUnloading: defaultForeignPortOfUnloading || undefined,
+    defaultPlaceOfDelivery: defaultPlaceOfDelivery || undefined,
+    defaultLoadingPier: defaultLoadingPier || undefined,
+    defaultExportingCarrier: defaultExportingCarrier || undefined,
+    blNumberPrefix: blNumberPrefix || undefined,
     createdAt: new Date().toISOString(),
     isActive: true
   };
@@ -1750,7 +1749,12 @@ app.post("/api/units", authMiddleware, requireTenantRole(["owner"]), (req: Authe
 });
 
 app.put("/api/units/:id", authMiddleware, requireTenantRole(["owner"]), (req: AuthenticatedRequest, res) => {
-  const { name, region, theme, unitSystem, isActive } = req.body;
+  const {
+    name, region, theme, unitSystem, isActive,
+    forwardingAgentName, forwardingAgentAddress, defaultPointOfOrigin,
+    defaultPlaceOfReceipt, defaultPortOfLoading, defaultForeignPortOfUnloading,
+    defaultPlaceOfDelivery, defaultLoadingPier, defaultExportingCarrier, blNumberPrefix
+  } = req.body;
   const currentDB = loadDB();
   if (!currentDB.units) currentDB.units = [];
   
@@ -1780,6 +1784,16 @@ app.put("/api/units/:id", authMiddleware, requireTenantRole(["owner"]), (req: Au
     };
   }
   if (isActive !== undefined) unit.isActive = Boolean(isActive);
+  if (forwardingAgentName !== undefined) unit.forwardingAgentName = forwardingAgentName;
+  if (forwardingAgentAddress !== undefined) unit.forwardingAgentAddress = forwardingAgentAddress;
+  if (defaultPointOfOrigin !== undefined) unit.defaultPointOfOrigin = defaultPointOfOrigin;
+  if (defaultPlaceOfReceipt !== undefined) unit.defaultPlaceOfReceipt = defaultPlaceOfReceipt;
+  if (defaultPortOfLoading !== undefined) unit.defaultPortOfLoading = defaultPortOfLoading;
+  if (defaultForeignPortOfUnloading !== undefined) unit.defaultForeignPortOfUnloading = defaultForeignPortOfUnloading;
+  if (defaultPlaceOfDelivery !== undefined) unit.defaultPlaceOfDelivery = defaultPlaceOfDelivery;
+  if (defaultLoadingPier !== undefined) unit.defaultLoadingPier = defaultLoadingPier;
+  if (defaultExportingCarrier !== undefined) unit.defaultExportingCarrier = defaultExportingCarrier;
+  if (blNumberPrefix !== undefined) unit.blNumberPrefix = blNumberPrefix;
 
   saveDB(currentDB);
   res.json(unit);

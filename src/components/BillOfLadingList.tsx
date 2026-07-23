@@ -23,7 +23,7 @@ import { normalizeUnitMatch } from "../utils/dataAuditor";
 import { motion, AnimatePresence } from "motion/react";
 
 interface BillOfLadingListProps {
-  activeUnit: 'US' | 'Europe';
+  activeUnit: string;
   currentUser?: UserProfile;
 }
 
@@ -31,6 +31,7 @@ export default function BillOfLadingList({ activeUnit, currentUser }: BillOfLadi
   const [blList, setBlList] = useState<BillOfLading[]>([]);
   const [receipts, setReceipts] = useState<WarehouseReceipt[]>([]);
   const [units, setUnits] = useState<any[]>([]);
+  const [currentTenant, setCurrentTenant] = useState<any>(null);
   const [expandedBls, setExpandedBls] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -63,14 +64,16 @@ export default function BillOfLadingList({ activeUnit, currentUser }: BillOfLadi
     setLoading(true);
     setError(null);
     try {
-      const [blData, receiptData, unitData] = await Promise.all([
-        apiService.getBLs(),
-        apiService.getReceipts(),
-        apiService.getUnits().catch(() => [])
+      const [blData, receiptData, unitData, tenantData] = await Promise.all([
+        apiService.getBLs(activeUnit),
+        apiService.getReceipts(activeUnit),
+        apiService.getUnits().catch(() => []),
+        apiService.getCurrentTenant().catch(() => null)
       ]);
       setBlList(blData);
       setReceipts(receiptData);
       setUnits(unitData);
+      setCurrentTenant(tenantData);
     } catch (err: any) {
       setError(err.message || "Failed to load Bills of Lading.");
     } finally {
@@ -428,6 +431,11 @@ export default function BillOfLadingList({ activeUnit, currentUser }: BillOfLadi
         {selectedBLForPDF && (
           <BillOfLadingPDF 
             bl={selectedBLForPDF}
+            carrierName={
+              units.find(u => u.id === selectedBLForPDF.unit)?.forwardingAgentName ||
+              currentTenant?.name ||
+              "Warehouse"
+            }
             onClose={() => setSelectedBLForPDF(null)}
           />
         )}

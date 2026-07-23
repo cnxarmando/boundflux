@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { WarehouseReceipt, Shipper, Consignee, BillOfLading } from "../types";
 import { apiService } from "../services/api";
+import { normalizeUnitMatch } from "../utils/dataAuditor";
 import { 
   FileText, 
   Search, 
@@ -18,7 +19,7 @@ interface BillOfLadingFormProps {
   onSuccess: () => void;
   onCancel: () => void;
   editingBL?: BillOfLading | null;
-  activeUnit: 'US' | 'Europe';
+  activeUnit: string;
 }
 
 export default function BillOfLadingForm({ onSuccess, onCancel, editingBL, activeUnit }: BillOfLadingFormProps) {
@@ -42,17 +43,17 @@ export default function BillOfLadingForm({ onSuccess, onCancel, editingBL, activ
   const [exporter, setExporter] = useState("");
   const [consigneeText, setConsigneeText] = useState("");
   const [notifyParty, setNotifyParty] = useState("");
-  const [forwardingAgent, setForwardingAgent] = useState("QUALITY LOGISTICS\n1168 SPRUCE AVE STE 100\nORLANDO, FL 32824");
-  const [pointOfOrigin, setPointOfOrigin] = useState("ORLANDO, FL");
+  const [forwardingAgent, setForwardingAgent] = useState("");
+  const [pointOfOrigin, setPointOfOrigin] = useState("");
   const [domesticRouting, setDomesticRouting] = useState("");
   
   const [preCarriageBy, setPreCarriageBy] = useState("TRUCK");
-  const [placeOfReceipt, setPlaceOfReceipt] = useState("PORT EVERGLADES");
-  const [exportingCarrier, setExportingCarrier] = useState("MAERSK MONTE ALEGRE V 627S");
-  const [portOfLoading, setPortOfLoading] = useState("PORT EVERGLADES");
-  const [foreignPortOfUnloading, setForeignPortOfUnloading] = useState("RIO DE JANEIRO");
-  const [placeOfDelivery, setPlaceOfDelivery] = useState("RIO DE JANEIRO");
-  const [loadingPier, setLoadingPier] = useState("PORT EVERGLADES TERMINAL 1");
+  const [placeOfReceipt, setPlaceOfReceipt] = useState("");
+  const [exportingCarrier, setExportingCarrier] = useState("");
+  const [portOfLoading, setPortOfLoading] = useState("");
+  const [foreignPortOfUnloading, setForeignPortOfUnloading] = useState("");
+  const [placeOfDelivery, setPlaceOfDelivery] = useState("");
+  const [loadingPier, setLoadingPier] = useState("");
   const [typeOfMove, setTypeOfMove] = useState("FCL/FCL");
   const [prepaidCollect, setPrepaidCollect] = useState<"PREPAID" | "COLLECT">("COLLECT");
   
@@ -78,7 +79,7 @@ export default function BillOfLadingForm({ onSuccess, onCancel, editingBL, activ
     async function loadData() {
       try {
         const [loadedReceipts, loadedShippers, loadedConsignees, loadedUnits] = await Promise.all([
-          apiService.getReceipts(),
+          apiService.getReceipts(activeUnit),
           apiService.getShippers(),
           apiService.getConsignees(),
           apiService.getUnits().catch(() => [])
@@ -119,34 +120,30 @@ export default function BillOfLadingForm({ onSuccess, onCancel, editingBL, activ
           setMeasurementCbm(editingBL.measurementCbm);
           setFreightCharges(editingBL.freightCharges);
         } else {
-          // Initialize fresh numbers
-          const randomBLNum = activeUnit === "Europe" ? `QLE${Math.floor(1000 + Math.random() * 9000)}` : `QL${Math.floor(1000 + Math.random() * 9000)}`;
+          // Initialize fresh numbers, pulling operational identity from the active Unit's configuration
+          const matchedUnit = loadedUnits.find((u: any) => u.id === activeUnit);
+          const randomBLNum = matchedUnit?.blNumberPrefix
+            ? `${matchedUnit.blNumberPrefix}${Math.floor(1000 + Math.random() * 9000)}`
+            : `BL${Math.floor(1000 + Math.random() * 9000)}`;
           const randomDocNum = `000000${Math.floor(1000 + Math.random() * 9000)}`;
           setBlNumber(randomBLNum);
           setDocumentNumber(randomDocNum);
           setExportReferences(`FILE #` + randomDocNum);
           setDate(new Date().toISOString().split("T")[0]);
           setDomesticRouting(`FILE# ${randomDocNum}\nBOOKING: FE${Math.floor(100000 + Math.random() * 900000)}HOURIO`);
-          
-          if (activeUnit === "Europe") {
-            setForwardingAgent("QUALITY LOGISTICS EUROPE BV\nKEIZERSGRACHT 241\n1016 DX AMSTERDAM, NETHERLANDS");
-            setPointOfOrigin("AMSTERDAM, NL");
-            setPlaceOfReceipt("PORT OF ROTTERDAM");
-            setPortOfLoading("PORT OF ROTTERDAM");
-            setExportingCarrier("MSC EMILY II V 124E");
-            setForeignPortOfUnloading("NEW YORK, US");
-            setPlaceOfDelivery("NEW YORK, US");
-            setLoadingPier("ROTTERDAM TERMINAL 3");
-          } else {
-            setForwardingAgent("QUALITY LOGISTICS\n1168 SPRUCE AVE STE 100\nORLANDO, FL 32824");
-            setPointOfOrigin("ORLANDO, FL");
-            setPlaceOfReceipt("PORT EVERGLADES");
-            setPortOfLoading("PORT EVERGLADES");
-            setExportingCarrier("MAERSK MONTE ALEGRE V 627S");
-            setForeignPortOfUnloading("RIO DE JANEIRO");
-            setPlaceOfDelivery("RIO DE JANEIRO");
-            setLoadingPier("PORT EVERGLADES TERMINAL 1");
-          }
+
+          setForwardingAgent(
+            matchedUnit?.forwardingAgentName || matchedUnit?.forwardingAgentAddress
+              ? `${matchedUnit.forwardingAgentName || ""}${matchedUnit.forwardingAgentName && matchedUnit.forwardingAgentAddress ? "\n" : ""}${matchedUnit.forwardingAgentAddress || ""}`
+              : ""
+          );
+          setPointOfOrigin(matchedUnit?.defaultPointOfOrigin || "");
+          setPlaceOfReceipt(matchedUnit?.defaultPlaceOfReceipt || "");
+          setPortOfLoading(matchedUnit?.defaultPortOfLoading || "");
+          setExportingCarrier(matchedUnit?.defaultExportingCarrier || "");
+          setForeignPortOfUnloading(matchedUnit?.defaultForeignPortOfUnloading || "");
+          setPlaceOfDelivery(matchedUnit?.defaultPlaceOfDelivery || "");
+          setLoadingPier(matchedUnit?.defaultLoadingPier || "");
         }
       } catch (err: any) {
         setError(err.message || "Error loading form data.");
@@ -383,16 +380,7 @@ export default function BillOfLadingForm({ onSuccess, onCancel, editingBL, activ
   };
 
   const receiptsOfUnit = receipts.filter(r => {
-    const rUnit = r.unit || "US";
-    let isOfUnit = rUnit === activeUnit;
-    if (!isOfUnit) {
-      const currentUnit = units.find(u => u.id === activeUnit);
-      if (currentUnit) {
-        if (rUnit === "US" && currentUnit.unitSystem === "imperial") isOfUnit = true;
-        if (rUnit === "Europe" && currentUnit.unitSystem === "metric") isOfUnit = true;
-      }
-    }
-    if (!isOfUnit) return false;
+    if (!normalizeUnitMatch(r.unit, activeUnit, units)) return false;
     
     // If we're editing a BL, we must show receipts that are already part of this BL
     if (editingBL) {

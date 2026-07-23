@@ -4,6 +4,7 @@ import { WarehouseReceipt, BillOfLading, Consignee } from "../types";
 import { X, Download, CheckSquare, Square, Calendar, User, Layers, Info } from "lucide-react";
 import { motion } from "motion/react";
 import * as XLSX from "xlsx";
+import { normalizeUnitMatch } from "../utils/dataAuditor";
 
 interface ExportExcelModalProps {
   isOpen: boolean;
@@ -79,18 +80,7 @@ export default function ExportExcelModal({
   if (!isOpen) return null;
 
   const isMatch = (itemUnit: string | undefined) => {
-    const u = itemUnit || "US";
-    if (u === activeUnit) return true;
-    const currentUnit = units.find((un) => un.id === activeUnit);
-    if (currentUnit) {
-      if (u === "US" && (currentUnit.region === "US" || currentUnit.unitSystem === "imperial" || currentUnit.name.toLowerCase().includes("orlando"))) return true;
-      if (u === "Europe" && (currentUnit.region === "EU" || currentUnit.unitSystem === "metric")) return true;
-      if (u === currentUnit.name || u === currentUnit.id || u === currentUnit.region) return true;
-    }
-    if (activeUnit === "US" || activeUnit.startsWith("u-orlando")) {
-      if (u === "US" || !u || u === "Orlando") return true;
-    }
-    return false;
+    return normalizeUnitMatch(itemUnit, activeUnit, units || []);
   };
 
   // Extract unique consignees from receipts of current unit for the select dropdown
@@ -214,7 +204,10 @@ export default function ExportExcelModal({
         if (selectedColumns.includes("totalCubicCft")) obj["Total Volume (Cft)"] = receipt.totalCubicCft || 0;
         if (selectedColumns.includes("totalCubicCbm")) obj["Total Volume (Cbm)"] = receipt.totalCubicCbm || 0;
         if (selectedColumns.includes("itemConsolidated")) {
-          const dimUnit = (receipt.unit || activeUnit) === "US" ? "in" : "cm";
+          const matchedUnitObj = (units || []).find(u => u.id === (receipt.unitId || receipt.unit)) || (units || []).find(u => u.id === activeUnit);
+          const dimUnit = matchedUnitObj
+            ? (matchedUnitObj.unitSystem === "metric" ? "cm" : "in")
+            : ((receipt.unit || activeUnit) === "Europe" ? "cm" : "in");
           obj["Consolidated Items (LxWxH)"] = receipt.items && receipt.items.length > 0
             ? receipt.items.map(item => {
                 const qty = item.qty || 1;

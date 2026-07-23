@@ -4,10 +4,11 @@ import { Printer, X } from "lucide-react";
 
 interface BillOfLadingPDFProps {
   bl: BillOfLading;
+  carrierName?: string;
   onClose: () => void;
 }
 
-export default function BillOfLadingPDF({ bl, onClose }: BillOfLadingPDFProps) {
+export default function BillOfLadingPDF({ bl, carrierName, onClose }: BillOfLadingPDFProps) {
   const printAreaRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -182,7 +183,7 @@ export default function BillOfLadingPDF({ bl, onClose }: BillOfLadingPDFProps) {
                   Q
                 </div>
                 <div className="text-[6px] font-black leading-none tracking-tight text-slate-900 text-center mt-1">
-                  QUALITY LOGISTICS SOLUTIONS
+                  {(carrierName || "WAREHOUSE").toUpperCase()}
                 </div>
               </div>
               <div className="text-right">
@@ -418,7 +419,7 @@ export default function BillOfLadingPDF({ bl, onClose }: BillOfLadingPDFProps) {
                 <div className="border-t border-slate-400 mt-2 pt-1.5 text-[8px]">
                   <span className="text-[6px] text-slate-500 block">SIGNED ON BEHALF OF CARRIER:</span>
                   <div className="flex justify-between items-end mt-1">
-                    <span>By: <strong className="font-bold text-slate-900">QUALITY LOGISTICS SOLUTIONS</strong></span>
+                    <span>By: <strong className="font-bold text-slate-900">{(carrierName || "WAREHOUSE").toUpperCase()}</strong></span>
                   </div>
                 </div>
               </div>

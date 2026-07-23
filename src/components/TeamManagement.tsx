@@ -229,13 +229,13 @@ export default function TeamManagement({ currentUser }: TeamManagementProps) {
           setActiveUnitName(found.name);
           setActiveUnitRegion(found.region);
         } else {
-          setActiveUnitName("Orlando Warehouse");
-          setActiveUnitRegion("US");
+          setActiveUnitName("Matriz");
+          setActiveUnitRegion("");
         }
       })
       .catch(() => {
-        setActiveUnitName("Orlando Warehouse");
-        setActiveUnitRegion("US");
+        setActiveUnitName("Matriz");
+        setActiveUnitRegion("");
       });
   }, []);
 
@@ -1167,7 +1167,7 @@ export default function TeamManagement({ currentUser }: TeamManagementProps) {
                     required
                     value={unitName}
                     onChange={(e) => setUnitName(e.target.value)}
-                    placeholder="Ex: Orlando Warehouse"
+                    placeholder="Ex: Miami Warehouse"
                     className="mt-1.5 block w-full px-3 py-2.5 border border-slate-200 dark:border-slate-600 rounded-xl bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 text-sm"
                   />
                 </div>

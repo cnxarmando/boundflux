@@ -7,6 +7,7 @@ interface ItemLabelPrintModalProps {
   receipt: WarehouseReceipt;
   consignees?: Consignee[];
   shippers?: Shipper[];
+  tenantName?: string;
   onClose: () => void;
 }
 
@@ -14,6 +15,7 @@ export default function ItemLabelPrintModal({
   receipt,
   consignees = [],
   shippers = [],
+  tenantName,
   onClose,
 }: ItemLabelPrintModalProps) {
   const [selectedVolumeIndex, setSelectedVolumeIndex] = useState<number>(0); // 0 = Volume 1, or 'all'
@@ -290,7 +292,7 @@ export default function ItemLabelPrintModal({
                   <div className="border-b-2 border-slate-900 pb-2 mb-2 flex items-center justify-between">
                     <div>
                       <div className="text-[10px] font-black tracking-widest uppercase text-slate-500">
-                        QUALITY LOGISTICS • {receipt.unit || "US"}
+                        {(tenantName || "WAREHOUSE").toUpperCase()} • {receipt.unit || "US"}
                       </div>
                       <div className="text-lg font-black tracking-tight text-slate-900 font-display">
                         WR #{receipt.number}

@@ -455,7 +455,7 @@ export default function App() {
               <span className={`px-2.5 py-0.5 ${unitBadgeClass} text-[10px] font-bold rounded-full uppercase tracking-wider font-semibold transition-colors duration-300`}>
                 {currentUnitObj 
                   ? `${getRegionFlag(currentUnitObj.region)} ${currentUnitObj.name}`
-                  : `🇺🇸 ${user.platformRole === "superadmin" ? (tenants.find((t: any) => t.tenantId === superadminSelectedTenantId)?.name || "Active") : (user.tenantName || "Quality Logistics")} - Orlando Warehouse`
+                  : `🏢 ${user.platformRole === "superadmin" ? (tenants.find((t: any) => t.tenantId === superadminSelectedTenantId)?.name || "Active") : (user.tenantName || "Main Unit")}`
                 }
               </span>
             )}

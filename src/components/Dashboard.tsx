@@ -10,6 +10,7 @@ import ImageWithFallback from "./ImageWithFallback";
 import ToastContainer, { ToastItem } from "./ToastContainer";
 import ItemLabelPrintModal from "./ItemLabelPrintModal";
 import AuditTrailModal from "./AuditTrailModal";
+import { normalizeUnitMatch } from "../utils/dataAuditor";
 import { 
   Search, 
   Filter, 
@@ -42,7 +43,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 
 interface DashboardProps {
-  activeUnit: 'US' | 'Europe' | string;
+  activeUnit: string;
   currentUser: UserProfile;
   onReceiveClick?: () => void;
 }
@@ -112,8 +113,8 @@ export default function Dashboard({ activeUnit, currentUser, onReceiveClick }: D
     try {
       setLoading(true);
       const [receiptData, blData, tenantData, unitData] = await Promise.all([
-        apiService.getReceipts(),
-        apiService.getBLs(),
+        apiService.getReceipts(activeUnit),
+        apiService.getBLs(activeUnit),
         apiService.getCurrentTenant().catch(() => null),
         apiService.getUnits().catch(() => [])
       ]);
@@ -251,18 +252,7 @@ export default function Dashboard({ activeUnit, currentUser, onReceiveClick }: D
 
   const receiptsOfUnit = receipts.filter(r => {
     if (r.unitId && r.unitId === activeUnit) return true;
-    const rUnit = r.unit || "US";
-    if (rUnit === activeUnit) return true;
-    const currentUnit = units.find(u => u.id === activeUnit);
-    if (currentUnit) {
-      if (rUnit === "US" && (currentUnit.region === "US" || currentUnit.unitSystem === "imperial" || currentUnit.name.toLowerCase().includes("orlando"))) return true;
-      if (rUnit === "Europe" && (currentUnit.region === "EU" || currentUnit.unitSystem === "metric")) return true;
-      if (rUnit === currentUnit.name || rUnit === currentUnit.id || rUnit === currentUnit.region) return true;
-    }
-    if (activeUnit === "US" || activeUnit.startsWith("u-orlando")) {
-      if (rUnit === "US" || !rUnit || rUnit === "Orlando") return true;
-    }
-    return false;
+    return normalizeUnitMatch(r.unit, activeUnit, units);
   });
 
   // Calculate Operational KPI Stats for active unit
@@ -1176,6 +1166,7 @@ export default function Dashboard({ activeUnit, currentUser, onReceiveClick }: D
       {labelReceipt && (
         <ItemLabelPrintModal
           receipt={labelReceipt}
+          tenantName={currentTenant?.name}
           onClose={() => setLabelReceipt(null)}
         />
       )}

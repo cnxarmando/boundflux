@@ -45,6 +45,16 @@ export default function UnitManager({ currentUser }: { currentUser: UserProfile 
   const [unitSystem, setUnitSystem] = useState<"imperial" | "metric">("imperial");
   const [primaryColor, setPrimaryColor] = useState("#4f46e5");
   const [accentColor, setAccentColor] = useState("#06b6d4");
+  const [forwardingAgentName, setForwardingAgentName] = useState("");
+  const [forwardingAgentAddress, setForwardingAgentAddress] = useState("");
+  const [defaultPointOfOrigin, setDefaultPointOfOrigin] = useState("");
+  const [defaultPlaceOfReceipt, setDefaultPlaceOfReceipt] = useState("");
+  const [defaultPortOfLoading, setDefaultPortOfLoading] = useState("");
+  const [defaultForeignPortOfUnloading, setDefaultForeignPortOfUnloading] = useState("");
+  const [defaultPlaceOfDelivery, setDefaultPlaceOfDelivery] = useState("");
+  const [defaultLoadingPier, setDefaultLoadingPier] = useState("");
+  const [defaultExportingCarrier, setDefaultExportingCarrier] = useState("");
+  const [blNumberPrefix, setBlNumberPrefix] = useState("");
 
   // Deletion Modal
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -74,6 +84,16 @@ export default function UnitManager({ currentUser }: { currentUser: UserProfile 
     setUnitSystem("imperial");
     setPrimaryColor("#4f46e5");
     setAccentColor("#06b6d4");
+    setForwardingAgentName("");
+    setForwardingAgentAddress("");
+    setDefaultPointOfOrigin("");
+    setDefaultPlaceOfReceipt("");
+    setDefaultPortOfLoading("");
+    setDefaultForeignPortOfUnloading("");
+    setDefaultPlaceOfDelivery("");
+    setDefaultLoadingPier("");
+    setDefaultExportingCarrier("");
+    setBlNumberPrefix("");
     setError("");
     setSuccess("");
     setIsOpenModal(true);
@@ -86,6 +106,16 @@ export default function UnitManager({ currentUser }: { currentUser: UserProfile 
     setUnitSystem(unit.unitSystem || "imperial");
     setPrimaryColor(unit.theme.primary);
     setAccentColor(unit.theme.accent);
+    setForwardingAgentName(unit.forwardingAgentName || "");
+    setForwardingAgentAddress(unit.forwardingAgentAddress || "");
+    setDefaultPointOfOrigin(unit.defaultPointOfOrigin || "");
+    setDefaultPlaceOfReceipt(unit.defaultPlaceOfReceipt || "");
+    setDefaultPortOfLoading(unit.defaultPortOfLoading || "");
+    setDefaultForeignPortOfUnloading(unit.defaultForeignPortOfUnloading || "");
+    setDefaultPlaceOfDelivery(unit.defaultPlaceOfDelivery || "");
+    setDefaultLoadingPier(unit.defaultLoadingPier || "");
+    setDefaultExportingCarrier(unit.defaultExportingCarrier || "");
+    setBlNumberPrefix(unit.blNumberPrefix || "");
     setError("");
     setSuccess("");
     setIsOpenModal(true);
@@ -111,6 +141,16 @@ export default function UnitManager({ currentUser }: { currentUser: UserProfile 
           primary: primaryColor,
           accent: accentColor,
         },
+        forwardingAgentName: forwardingAgentName.trim(),
+        forwardingAgentAddress: forwardingAgentAddress.trim(),
+        defaultPointOfOrigin: defaultPointOfOrigin.trim(),
+        defaultPlaceOfReceipt: defaultPlaceOfReceipt.trim(),
+        defaultPortOfLoading: defaultPortOfLoading.trim(),
+        defaultForeignPortOfUnloading: defaultForeignPortOfUnloading.trim(),
+        defaultPlaceOfDelivery: defaultPlaceOfDelivery.trim(),
+        defaultLoadingPier: defaultLoadingPier.trim(),
+        defaultExportingCarrier: defaultExportingCarrier.trim(),
+        blNumberPrefix: blNumberPrefix.trim(),
       };
 
       if (editingUnit) {
@@ -347,7 +387,7 @@ export default function UnitManager({ currentUser }: { currentUser: UserProfile 
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Ex: Orlando Warehouse"
+                    placeholder="Ex: Miami Warehouse"
                     className="mt-1.5 block w-full px-3 py-2.5 border border-slate-200 dark:border-slate-600 rounded-xl bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 text-sm"
                   />
                 </div>
@@ -442,6 +482,73 @@ export default function UnitManager({ currentUser }: { currentUser: UserProfile 
                           className="w-full bg-transparent text-xs font-mono text-slate-800 dark:text-white uppercase focus:outline-hidden"
                         />
                       </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Operational Identity for Bill of Lading */}
+                <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-700">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                    Dados para o Bill of Lading (opcional)
+                  </label>
+                  <p className="text-[11px] text-slate-400 dark:text-slate-500 -mt-2">
+                    Preenchidos automaticamente ao criar um BL novo nesta filial. Deixe em branco para preencher manualmente em cada BL.
+                  </p>
+
+                  <div>
+                    <span className="block text-[11px] text-slate-500 mb-1">Nome do Agente Expedidor (Forwarding Agent)</span>
+                    <input
+                      type="text"
+                      value={forwardingAgentName}
+                      onChange={(e) => setForwardingAgentName(e.target.value)}
+                      placeholder="Ex: Minha Empresa LTDA"
+                      className="block w-full px-3 py-2.5 border border-slate-200 dark:border-slate-600 rounded-xl bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <span className="block text-[11px] text-slate-500 mb-1">Endereço do Agente Expedidor</span>
+                    <textarea
+                      value={forwardingAgentAddress}
+                      onChange={(e) => setForwardingAgentAddress(e.target.value)}
+                      placeholder={"Ex: 123 Main St\nCidade, Estado, CEP"}
+                      rows={2}
+                      className="block w-full px-3 py-2.5 border border-slate-200 dark:border-slate-600 rounded-xl bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 text-sm"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <span className="block text-[11px] text-slate-500 mb-1">Origem Padrão (Point of Origin)</span>
+                      <input type="text" value={defaultPointOfOrigin} onChange={(e) => setDefaultPointOfOrigin(e.target.value)} placeholder="Ex: Miami, FL" className="block w-full px-3 py-2.5 border border-slate-200 dark:border-slate-600 rounded-xl bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 text-sm" />
+                    </div>
+                    <div>
+                      <span className="block text-[11px] text-slate-500 mb-1">Local de Recebimento (Place of Receipt)</span>
+                      <input type="text" value={defaultPlaceOfReceipt} onChange={(e) => setDefaultPlaceOfReceipt(e.target.value)} placeholder="Ex: Port of Miami" className="block w-full px-3 py-2.5 border border-slate-200 dark:border-slate-600 rounded-xl bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 text-sm" />
+                    </div>
+                    <div>
+                      <span className="block text-[11px] text-slate-500 mb-1">Porto de Embarque (Port of Loading)</span>
+                      <input type="text" value={defaultPortOfLoading} onChange={(e) => setDefaultPortOfLoading(e.target.value)} placeholder="Ex: Port of Miami" className="block w-full px-3 py-2.5 border border-slate-200 dark:border-slate-600 rounded-xl bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 text-sm" />
+                    </div>
+                    <div>
+                      <span className="block text-[11px] text-slate-500 mb-1">Porto de Desembarque (Foreign Port of Unloading)</span>
+                      <input type="text" value={defaultForeignPortOfUnloading} onChange={(e) => setDefaultForeignPortOfUnloading(e.target.value)} placeholder="Ex: Santos, Brasil" className="block w-full px-3 py-2.5 border border-slate-200 dark:border-slate-600 rounded-xl bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 text-sm" />
+                    </div>
+                    <div>
+                      <span className="block text-[11px] text-slate-500 mb-1">Local de Entrega (Place of Delivery)</span>
+                      <input type="text" value={defaultPlaceOfDelivery} onChange={(e) => setDefaultPlaceOfDelivery(e.target.value)} placeholder="Ex: Santos, Brasil" className="block w-full px-3 py-2.5 border border-slate-200 dark:border-slate-600 rounded-xl bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 text-sm" />
+                    </div>
+                    <div>
+                      <span className="block text-[11px] text-slate-500 mb-1">Píer/Terminal de Embarque (Loading Pier)</span>
+                      <input type="text" value={defaultLoadingPier} onChange={(e) => setDefaultLoadingPier(e.target.value)} placeholder="Ex: Terminal 3" className="block w-full px-3 py-2.5 border border-slate-200 dark:border-slate-600 rounded-xl bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 text-sm" />
+                    </div>
+                    <div>
+                      <span className="block text-[11px] text-slate-500 mb-1">Transportadora Padrão (Exporting Carrier)</span>
+                      <input type="text" value={defaultExportingCarrier} onChange={(e) => setDefaultExportingCarrier(e.target.value)} placeholder="Ex: MAERSK LINE" className="block w-full px-3 py-2.5 border border-slate-200 dark:border-slate-600 rounded-xl bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 text-sm" />
+                    </div>
+                    <div>
+                      <span className="block text-[11px] text-slate-500 mb-1">Prefixo do Número de BL</span>
+                      <input type="text" value={blNumberPrefix} onChange={(e) => setBlNumberPrefix(e.target.value)} placeholder="Ex: ML" maxLength={6} className="block w-full px-3 py-2.5 border border-slate-200 dark:border-slate-600 rounded-xl bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500 text-sm" />
                     </div>
                   </div>
                 </div>
