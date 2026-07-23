@@ -201,6 +201,48 @@ export default function SuperadminPanel() {
     }
   };
 
+  const handlePurgeTenant = async (tenantId: string, tenantName: string) => {
+    const typed = window.prompt(
+      `PURGA DEFINITIVA — esta ação NÃO PODE SER DESFEITA.\n\nTodos os dados de "${tenantName}" (recibos, BLs, shippers, consignees, unidades, usuários) serão apagados permanentemente do banco de dados.\n\nDigite o nome exato da empresa para confirmar: ${tenantName}`
+    );
+    if (typed !== tenantName) {
+      if (typed !== null) {
+        setError("Nome digitado não confere. Purga cancelada por segurança.");
+      }
+      return;
+    }
+    setError("");
+    setSuccess("");
+    try {
+      const res = await apiService.purgeTenant(tenantId);
+      setSuccess(res.message || `Empresa "${tenantName}" purgada definitivamente.`);
+      fetchData();
+    } catch (err: any) {
+      setError(err.message || "Erro ao purgar empresa.");
+    }
+  };
+
+  const handleResetAllTenants = async () => {
+    const typed = window.prompt(
+      `RESET TOTAL DA PLATAFORMA — esta ação NÃO PODE SER DESFEITA.\n\nTODAS as empresas (${tenants.length}), usuários, recibos, BLs, unidades, convites e logs de auditoria serão apagados permanentemente.\n\nDigite exatamente a frase abaixo para confirmar:\nRESETAR TUDO`
+    );
+    if (typed !== "RESETAR TUDO") {
+      if (typed !== null) {
+        setError("Frase digitada não confere. Reset cancelado por segurança.");
+      }
+      return;
+    }
+    setError("");
+    setSuccess("");
+    try {
+      const res = await apiService.resetAllTenants("RESETAR TUDO");
+      setSuccess(res.message || "Reset total da plataforma concluído.");
+      fetchData();
+    } catch (err: any) {
+      setError(err.message || "Erro ao resetar a plataforma.");
+    }
+  };
+
   const handleDownloadBackup = async (tenantId: string, tenantName: string) => {
     setError("");
     setSuccess("");
@@ -741,14 +783,24 @@ export default function SuperadminPanel() {
                                 </button>
                               </div>
                             ) : t.deletedAt ? (
-                              <button
-                                onClick={() => handleRestoreTenant(t.tenantId, t.name)}
-                                className="px-2.5 py-1 text-[10px] font-bold bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 cursor-pointer flex items-center gap-1 transition-all"
-                                title="Restaurar Empresa"
-                              >
-                                <RefreshCw className="h-3 w-3" />
-                                Restaurar
-                              </button>
+                              <>
+                                <button
+                                  onClick={() => handleRestoreTenant(t.tenantId, t.name)}
+                                  className="px-2.5 py-1 text-[10px] font-bold bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 cursor-pointer flex items-center gap-1 transition-all"
+                                  title="Restaurar Empresa"
+                                >
+                                  <RefreshCw className="h-3 w-3" />
+                                  Restaurar
+                                </button>
+                                <button
+                                  onClick={() => handlePurgeTenant(t.tenantId, t.name)}
+                                  className="px-2.5 py-1 text-[10px] font-bold bg-rose-600 text-white rounded-lg hover:bg-rose-700 cursor-pointer flex items-center gap-1 transition-all"
+                                  title="Purgar Definitivamente Agora (não espera 30 dias)"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                  Purgar Agora
+                                </button>
+                              </>
                             ) : (
                               <>
                                 <button
@@ -782,6 +834,27 @@ export default function SuperadminPanel() {
                 </tbody>
               </table>
             </div>
+          </div>
+
+          {/* DANGER ZONE — full platform reset, for wiping fictitious/test data */}
+          <div className="lg:col-span-3 bg-rose-50 dark:bg-rose-950/10 p-5 rounded-2xl border-2 border-dashed border-rose-300 dark:border-rose-900/40 space-y-3">
+            <h3 className="text-sm font-bold text-rose-700 dark:text-rose-400 flex items-center gap-2">
+              <AlertTriangle className="h-4.5 w-4.5" />
+              Zona de Perigo — Reset Total da Plataforma
+            </h3>
+            <p className="text-[11px] text-rose-600/80 dark:text-rose-400/70">
+              Apaga TODAS as empresas cadastradas ({tenants.length}) e todos os dados associados
+              (recibos, BLs, shippers, consignees, unidades, usuários, convites e logs de auditoria)
+              permanentemente. Use apenas para limpar dados fictícios/de teste antes de começar a
+              operação real. Esta ação não pode ser desfeita.
+            </p>
+            <button
+              onClick={handleResetAllTenants}
+              className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold cursor-pointer transition-all flex items-center gap-2"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Resetar Toda a Plataforma
+            </button>
           </div>
 
         </div>

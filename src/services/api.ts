@@ -384,6 +384,31 @@ export const apiService = {
     return res.json();
   },
 
+  async purgeTenant(tenantId: string): Promise<any> {
+    const res = await fetch(`${API_BASE}/api/admin/tenants/${tenantId}/purge`, {
+      method: "POST",
+      headers: getHeaders(),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || "Falha ao purgar empresa definitivamente");
+    }
+    return res.json();
+  },
+
+  async resetAllTenants(confirmationPhrase: string): Promise<any> {
+    const res = await fetch(`${API_BASE}/api/admin/platform/reset-all-tenants`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify({ confirmationPhrase }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || "Falha ao resetar a plataforma");
+    }
+    return res.json();
+  },
+
   async downloadTenantBackup(tenantId: string): Promise<any> {
     const res = await fetch(`${API_BASE}/api/admin/tenants/${tenantId}/download-backup`, {
       headers: getHeaders(),

@@ -2843,6 +2843,125 @@ app.post("/api/admin/tenants/:tenantId/restore", authMiddleware, (req: Authentic
   res.json({ success: true, message: `Empresa "${tenant.name}" restaurada com sucesso.`, tenant });
 });
 
+// Shared cascade helper: removes every record belonging to a tenant (shippers, consignees,
+// receipts, BLs, users, invitations, units) plus the tenant record itself. Does NOT touch
+// auditLog, matching the established policy that audit history survives tenant deletion.
+// Returns a count of how many records were removed, for reporting back to the caller.
+function purgeTenantCascade(currentDB: DBStructure, tenantId: string): Record<string, number> {
+  const counts: Record<string, number> = {};
+
+  const before = {
+    shippers: (currentDB.shippers || []).length,
+    consignees: (currentDB.consignees || []).length,
+    receipts: (currentDB.receipts || []).length,
+    billsOfLading: (currentDB.billsOfLading || []).length,
+    users: (currentDB.users || []).length,
+    invitations: (currentDB.invitations || []).length,
+    units: (currentDB.units || []).length,
+  };
+
+  currentDB.shippers = (currentDB.shippers || []).filter(s => s.tenantId !== tenantId);
+  currentDB.consignees = (currentDB.consignees || []).filter(c => c.tenantId !== tenantId);
+  currentDB.receipts = (currentDB.receipts || []).filter(r => r.tenantId !== tenantId);
+  if (currentDB.billsOfLading) {
+    currentDB.billsOfLading = currentDB.billsOfLading.filter(b => b.tenantId !== tenantId);
+  }
+  currentDB.users = (currentDB.users || []).filter(u => u.tenantId !== tenantId);
+  if (currentDB.invitations) {
+    currentDB.invitations = currentDB.invitations.filter(i => i.tenantId !== tenantId);
+  }
+  if (currentDB.units) {
+    currentDB.units = currentDB.units.filter(un => un.tenantId !== tenantId);
+  }
+  currentDB.tenants = (currentDB.tenants || []).filter(t => t.tenantId !== tenantId);
+
+  counts.shippers = before.shippers - (currentDB.shippers || []).length;
+  counts.consignees = before.consignees - (currentDB.consignees || []).length;
+  counts.receipts = before.receipts - (currentDB.receipts || []).length;
+  counts.billsOfLading = before.billsOfLading - (currentDB.billsOfLading || []).length;
+  counts.users = before.users - (currentDB.users || []).length;
+  counts.invitations = before.invitations - (currentDB.invitations || []).length;
+  counts.units = before.units - (currentDB.units || []).length;
+
+  return counts;
+}
+
+// Immediate hard delete (purge) of a single tenant + all its associated data.
+// Unlike the 30-day auto-purge, this runs instantly. Superadmin only.
+app.post("/api/admin/tenants/:tenantId/purge", authMiddleware, requirePlatformRole("superadmin"), (req: AuthenticatedRequest, res) => {
+  const { tenantId } = req.params;
+  const currentDB = loadDB();
+  const tenant = (currentDB.tenants || []).find(t => t.tenantId === tenantId);
+  if (!tenant) {
+    res.status(404).json({ error: "Empresa não encontrada." });
+    return;
+  }
+
+  const tenantName = tenant.name;
+  const counts = purgeTenantCascade(currentDB, tenantId);
+
+  if (!currentDB.auditLog) currentDB.auditLog = [];
+  currentDB.auditLog.push({
+    id: `audit-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+    action: "TENANT_PURGE_HARD_DELETE",
+    resource: "tenants",
+    resourceId: tenantId,
+    tenantId: tenantId,
+    performedBy: req.user.email,
+    performedByUid: req.user.uid,
+    timestamp: new Date().toISOString(),
+    details: `Empresa "${tenantName}" purgada definitivamente (${JSON.stringify(counts)}).`
+  });
+
+  saveDB(currentDB);
+  res.json({ success: true, message: `Empresa "${tenantName}" e todos os seus dados foram purgados definitivamente.`, counts });
+});
+
+// DANGER ZONE — resets the whole platform: purges every tenant (and all cascade data)
+// plus the audit log itself. Meant only for wiping fictitious/test data, never for a live
+// deployment. Superadmin only, and requires the exact confirmation phrase in the body.
+app.post("/api/admin/platform/reset-all-tenants", authMiddleware, requirePlatformRole("superadmin"), (req: AuthenticatedRequest, res) => {
+  const { confirmationPhrase } = req.body;
+  if (confirmationPhrase !== "RESETAR TUDO") {
+    res.status(400).json({ error: "Frase de confirmação incorreta. Digite exatamente: RESETAR TUDO" });
+    return;
+  }
+
+  const currentDB = loadDB();
+  const tenantIds = (currentDB.tenants || []).map(t => t.tenantId);
+  const tenantCount = tenantIds.length;
+
+  for (const tenantId of tenantIds) {
+    purgeTenantCascade(currentDB, tenantId);
+  }
+
+  // Also clear anything orphaned (no tenantId, or stray records) and the audit log itself,
+  // since this action is explicitly a full test-data wipe, not a routine tenant deletion.
+  currentDB.shippers = [];
+  currentDB.consignees = [];
+  currentDB.receipts = [];
+  currentDB.billsOfLading = [];
+  currentDB.users = [];
+  currentDB.invitations = [];
+  currentDB.units = [];
+  currentDB.tenants = [];
+  currentDB.pendingDeletions = [];
+  currentDB.auditLog = [{
+    id: `audit-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+    action: "PLATFORM_FULL_RESET",
+    resource: "platform",
+    resourceId: "all",
+    tenantId: "all",
+    performedBy: req.user.email,
+    performedByUid: req.user.uid,
+    timestamp: new Date().toISOString(),
+    details: `Reset total da plataforma executado (${tenantCount} tenant(s) removido(s)).`
+  }];
+
+  saveDB(currentDB);
+  res.json({ success: true, message: `Reset total concluído. ${tenantCount} empresa(s) e todos os dados associados foram removidos.` });
+});
+
 
 // Admin endpoint to download backup of all tenant data (JSON format)
 app.get("/api/admin/tenants/:tenantId/download-backup", authMiddleware, (req: AuthenticatedRequest, res) => {
