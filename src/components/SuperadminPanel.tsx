@@ -498,10 +498,10 @@ export default function SuperadminPanel() {
                   ? "bg-white/15 border-indigo-400/60 shadow-inner"
                   : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-indigo-400/40"
               }`}
-              title="Clique para monitorar acessos e logins de usuários"
+              title="Clique para monitorar acessos e lista de usuários cadastrados"
             >
               <div className="flex items-center justify-between">
-                <span className="text-slate-400 font-medium block group-hover:text-slate-200 transition-colors">Usuários Ativos</span>
+                <span className="text-slate-400 font-medium block group-hover:text-slate-200 transition-colors">Usuários Cadastrados</span>
                 <span className="text-[10px] text-indigo-300 opacity-0 group-hover:opacity-100 transition-opacity font-semibold">Ver →</span>
               </div>
               <span className="text-xl font-bold font-mono mt-1 block flex items-center gap-2 text-indigo-300 group-hover:text-white transition-colors">
