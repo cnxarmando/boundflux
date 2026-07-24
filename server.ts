@@ -1253,7 +1253,14 @@ const requireSameTenant = (req: AuthenticatedRequest, res: express.Response, nex
     next();
     return;
   }
-  req.tenantId = user.tenantId || "t-1";
+  // Do NOT default to "t-1" here. A non-superadmin user should always have a real
+  // tenantId assigned at invite/login time; if one somehow doesn't, silently placing them
+  // in "t-1" would show them another company's data instead of surfacing the problem.
+  if (!user.tenantId) {
+    res.status(403).json({ error: "Acesso proibido: sua conta não está vinculada a nenhuma empresa ativa." });
+    return;
+  }
+  req.tenantId = user.tenantId;
   next();
 };
 
@@ -1682,7 +1689,14 @@ app.get("/api/units", authMiddleware, (req: AuthenticatedRequest, res) => {
 // Data Integrity & Audit Endpoint
 app.get("/api/audit/data-integrity", authMiddleware, (req: AuthenticatedRequest, res) => {
   const currentDB = loadDB();
-  const tenantId = req.tenantId || "t-1";
+  // Do NOT default to "t-1" here. If a superadmin hits this without a company selected in
+  // the "Company:" selector, req.tenantId is null — silently checking "t-1" would run the
+  // report against a specific customer's data without saying so, instead of asking to select one.
+  if (!req.tenantId) {
+    res.status(400).json({ error: "Selecione uma empresa no seletor \"Company:\" para rodar a checagem de integridade." });
+    return;
+  }
+  const tenantId = req.tenantId;
 
   const tenantReceipts = (currentDB.receipts || []).filter((r: any) => r.tenantId === tenantId);
   const tenantBLs = (currentDB.billsOfLading || []).filter((b: any) => b.tenantId === tenantId);
@@ -2522,7 +2536,9 @@ app.post("/api/admin/:resource/:id/restore", authMiddleware, requirePlatformRole
     action: "RESTORE_SUPERADMIN",
     resource,
     resourceId: id,
-    tenantId: record.tenantId || "t-1",
+    // No "t-1" fallback: if the record itself has no tenantId, the log should say so
+    // (null) rather than misattribute the action to a specific customer's tenant.
+    tenantId: record.tenantId || null,
     performedBy: req.user.email,
     performedByUid: req.user.uid,
     timestamp: new Date().toISOString()
@@ -2550,7 +2566,8 @@ app.delete("/api/admin/:resource/:id/purge", authMiddleware, requirePlatformRole
   }
   
   const record = arr[index];
-  const itemTenantId = record.tenantId || "t-1";
+  // No "t-1" fallback here either: same reasoning as the restore log above.
+  const itemTenantId = record.tenantId || null;
   
   // Hard delete / purge
   arr.splice(index, 1);
