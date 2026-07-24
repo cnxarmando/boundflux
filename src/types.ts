@@ -130,15 +130,44 @@ export interface User {
 
 export interface UserProfile extends User {}
 
+// Module-based licensing: a tenant's annual license grants access to one or more
+// modules. "freight_forwarding" and "warehouse" are the core modules — they're what
+// BoundFlux already does today (BL + Warehouse Receipts) and every tenant has them.
+// The rest are add-on modules a customer may or may not have purchased.
+export type ModuleKey =
+  | 'freight_forwarding'
+  | 'warehouse'
+  | 'three_pl'
+  | 'pickup_delivery'
+  | 'vehicle_inventory'
+  | 'accounting';
+
+export interface ModuleDefinition {
+  key: ModuleKey;
+  name: string;
+  description: string;
+  isCore: boolean; // core modules are always enabled for every tenant and can't be unchecked
+}
+
 export interface Tenant {
   tenantId: string;
   name: string;
   domain: string;
+  taxId?: string;
+  phone?: string;
+  address?: string;
   planTier: 'Starter' | 'Pro' | 'Enterprise';
   status: 'active' | 'suspended';
   retentionDays?: number;
   deletedAt?: string | null;
   deletedBy?: string;
+  // Which modules this tenant's annual license includes. Core modules are always
+  // present here (enforced server-side), add-on modules are opt-in per license.
+  enabledModules?: ModuleKey[];
+  // When the current annual license period ends. Used to flag tenants whose license
+  // needs renewal — this does NOT automatically revoke access on expiry (that's a
+  // business decision for later); today it's informational only.
+  licenseExpiresAt?: string | null;
 }
 
 export interface BillOfLading {

@@ -334,6 +334,14 @@ export const apiService = {
     return res.json();
   },
 
+  async getModules(): Promise<{ key: string; name: string; description: string; isCore: boolean }[]> {
+    const res = await fetch(`${API_BASE}/api/admin/modules`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) throw new Error("Falha ao carregar catálogo de módulos");
+    return res.json();
+  },
+
   async createTenant(data: any): Promise<any> {
     const res = await fetch(`${API_BASE}/api/admin/tenants`, {
       method: "POST",

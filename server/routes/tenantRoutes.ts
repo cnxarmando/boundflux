@@ -4,11 +4,41 @@ import { authMiddleware, requirePlatformRole, AuthenticatedRequest } from "../mi
 
 export const tenantRouter = Router();
 
+// Module catalog endpoint — the frontend fetches this instead of hardcoding the list,
+// so adding/renaming a module only requires a change in MODULE_CATALOG above.
+tenantRouter.get("/admin/modules", authMiddleware, requirePlatformRole("superadmin"), (req: AuthenticatedRequest, res) => {
+  res.json(MODULE_CATALOG);
+});
+
 const PLAN_MONTHLY_PRICE_USD: Record<string, number> = {
   Starter: 199,
   Pro: 499,
   Enterprise: 1299
 };
+
+// Module catalog: single source of truth for which modules exist, their display info,
+// and whether they're "core" (always included, can't be unchecked) or an add-on that's
+// part of what a tenant's annual license does or doesn't include. The frontend fetches
+// this list instead of hardcoding it, so adding a new module later only requires a
+// change here.
+export const MODULE_CATALOG: { key: string; name: string; description: string; isCore: boolean }[] = [
+  { key: "freight_forwarding", name: "Freight Forwarding", description: "Emissão e gestão de Conhecimentos de Embarque (BL), exportadores e consignatários.", isCore: true },
+  { key: "warehouse", name: "Warehouse", description: "Recebimento, armazenagem e expedição via Warehouse Receipts, por unidade/filial.", isCore: true },
+  { key: "three_pl", name: "3PL", description: "Cobrança de armazenagem e serviços prestados a clientes terceiros (3PL).", isCore: false },
+  { key: "pickup_delivery", name: "Pickup & Delivery / Doméstico", description: "Coleta e entrega doméstica, sem cruzar fronteira internacional.", isCore: false },
+  { key: "vehicle_inventory", name: "Vehicle Inventory", description: "Controle de inventário de veículos (RoRo / vehicle shipping).", isCore: false },
+  { key: "accounting", name: "Accounting", description: "Faturamento e financeiro (contas a receber, a pagar e livro-razão).", isCore: false }
+];
+
+const CORE_MODULE_KEYS = MODULE_CATALOG.filter(m => m.isCore).map(m => m.key);
+
+// Always includes the core modules, de-duplicates, and drops any key not in the catalog
+// (defends against a stale/malformed value ending up in enabledModules).
+function normalizeModules(requested: string[] | undefined): string[] {
+  const validKeys = new Set(MODULE_CATALOG.map(m => m.key));
+  const requestedValid = (requested || []).filter(k => validKeys.has(k));
+  return Array.from(new Set([...CORE_MODULE_KEYS, ...requestedValid]));
+}
 
 function purgeTenantCascade(currentDB: DBStructure, tenantId: string): Record<string, number> {
   const counts: Record<string, number> = {};
@@ -193,7 +223,7 @@ tenantRouter.post("/admin/tenants", authMiddleware, (req: AuthenticatedRequest, 
     return;
   }
   
-  const { name, domain, planTier, status, retentionDays } = req.body;
+  const { name, domain, taxId, phone, address, planTier, status, retentionDays, enabledModules, licenseExpiresAt } = req.body;
   if (!name || !domain) {
     res.status(400).json({ error: "Nome e domínio são campos obrigatórios." });
     return;
@@ -214,9 +244,14 @@ tenantRouter.post("/admin/tenants", authMiddleware, (req: AuthenticatedRequest, 
     tenantId: `t-${Date.now()}`,
     name,
     domain: domain.toLowerCase(),
+    taxId: taxId ? String(taxId).trim() : "",
+    phone: phone ? String(phone).trim() : "",
+    address: address ? String(address).trim() : "",
     planTier: planTier || "Starter",
     status: status || "active",
     retentionDays: daysVal,
+    enabledModules: normalizeModules(enabledModules),
+    licenseExpiresAt: licenseExpiresAt || null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
@@ -234,7 +269,7 @@ tenantRouter.put("/admin/tenants/:tenantId", authMiddleware, (req: Authenticated
   }
 
   const { tenantId } = req.params;
-  const { name, domain, planTier, status, retentionDays } = req.body;
+  const { name, domain, taxId, phone, address, planTier, status, retentionDays, enabledModules, licenseExpiresAt } = req.body;
 
   const currentDB = loadDB();
   if (!currentDB.tenants) currentDB.tenants = [];
@@ -252,9 +287,16 @@ tenantRouter.put("/admin/tenants/:tenantId", authMiddleware, (req: Authenticated
     ...tenant,
     name: name || tenant.name,
     domain: domain ? domain.toLowerCase() : tenant.domain,
+    taxId: taxId !== undefined ? String(taxId).trim() : (tenant.taxId || ""),
+    phone: phone !== undefined ? String(phone).trim() : (tenant.phone || ""),
+    address: address !== undefined ? String(address).trim() : (tenant.address || ""),
     planTier: planTier || tenant.planTier,
     status: status || tenant.status,
     retentionDays: daysVal,
+    // Only touch enabledModules if the request actually sent something for it — an
+    // edit to just the name/plan shouldn't silently wipe out the tenant's modules.
+    enabledModules: enabledModules !== undefined ? normalizeModules(enabledModules) : normalizeModules(tenant.enabledModules),
+    licenseExpiresAt: licenseExpiresAt !== undefined ? (licenseExpiresAt || null) : (tenant.licenseExpiresAt ?? null),
     updatedAt: new Date().toISOString()
   };
   delete (updatedTenant as any).customRetentionDays;

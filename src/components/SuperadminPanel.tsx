@@ -31,7 +31,10 @@ import {
   AlertCircle,
   ShieldAlert,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  FileText,
+  Phone,
+  MapPin
 } from "lucide-react";
 
 export default function SuperadminPanel() {
@@ -51,9 +54,21 @@ export default function SuperadminPanel() {
   // Create Tenant form states
   const [tenantName, setTenantName] = useState("");
   const [tenantDomain, setTenantDomain] = useState("");
+  const [tenantTaxId, setTenantTaxId] = useState("");
+  const [tenantPhone, setTenantPhone] = useState("");
+  const [tenantAddress, setTenantAddress] = useState("");
   const [tenantPlan, setTenantPlan] = useState<"Starter" | "Pro" | "Enterprise">("Starter");
   const [retentionDays, setRetentionDays] = useState<string>("30");
   const [newTenantOwnerEmail, setNewTenantOwnerEmail] = useState("");
+  const [newTenantModules, setNewTenantModules] = useState<string[]>([]);
+  const [newTenantLicenseExpiresAt, setNewTenantLicenseExpiresAt] = useState<string>(() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() + 1);
+    return d.toISOString().slice(0, 10);
+  });
+
+  // Module catalog (fetched once — single source of truth lives on the backend)
+  const [moduleCatalog, setModuleCatalog] = useState<{ key: string; name: string; description: string; isCore: boolean }[]>([]);
 
   // Owner form states
   const [ownerEmail, setOwnerEmail] = useState("");
@@ -63,9 +78,14 @@ export default function SuperadminPanel() {
   const [editingTenant, setEditingTenant] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editDomain, setEditDomain] = useState("");
+  const [editTaxId, setEditTaxId] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editAddress, setEditAddress] = useState("");
   const [editPlan, setEditPlan] = useState<"Starter" | "Pro" | "Enterprise">("Starter");
   const [editStatus, setEditStatus] = useState<"active" | "suspended">("active");
   const [editRetention, setEditRetention] = useState<string>("30");
+  const [editModules, setEditModules] = useState<string[]>([]);
+  const [editLicenseExpiresAt, setEditLicenseExpiresAt] = useState<string>("");
 
   // Owners Tab lists & inline edit states
   const [adminInvitations, setAdminInvitations] = useState<any[]>([]);
@@ -121,6 +141,10 @@ export default function SuperadminPanel() {
       ]);
       setAdminInvitations(invitesData);
       setAdminUsers(usersData);
+
+      // 6. Module catalog (rarely changes — safe to fetch alongside everything else)
+      const modules = await apiService.getModules().catch(() => []);
+      setModuleCatalog(modules);
     } catch (err: any) {
       setError(err.message || "Erro ao carregar dados do painel superadmin.");
     } finally {
@@ -144,15 +168,24 @@ export default function SuperadminPanel() {
       const newTenant = await apiService.createTenant({
         name: tenantName,
         domain: tenantDomain.toLowerCase(),
+        taxId: tenantTaxId,
+        phone: tenantPhone,
+        address: tenantAddress,
         planTier: tenantPlan,
         status: "active",
-        retentionDays: retentionDays ? Number(retentionDays) : 30
+        retentionDays: retentionDays ? Number(retentionDays) : 30,
+        enabledModules: newTenantModules,
+        licenseExpiresAt: newTenantLicenseExpiresAt || null
       });
 
       setTenantName("");
       setTenantDomain("");
+      setTenantTaxId("");
+      setTenantPhone("");
+      setTenantAddress("");
       setTenantPlan("Starter");
       setRetentionDays("30");
+      setNewTenantModules([]);
 
       // If an owner e-mail was provided, chain the invitation creation right after —
       // this is a second, independent API call, so if it fails the tenant itself still
@@ -189,9 +222,14 @@ export default function SuperadminPanel() {
       await apiService.updateTenant(tenantId, {
         name: editName,
         domain: editDomain,
+        taxId: editTaxId,
+        phone: editPhone,
+        address: editAddress,
         planTier: editPlan,
         status: editStatus,
-        retentionDays: editRetention ? Number(editRetention) : 30
+        retentionDays: editRetention ? Number(editRetention) : 30,
+        enabledModules: editModules,
+        licenseExpiresAt: editLicenseExpiresAt || null
       });
       setSuccess("Configurações da empresa atualizadas com sucesso!");
       setEditingTenant(null);
@@ -717,6 +755,62 @@ export default function SuperadminPanel() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                    EIN / Tax ID / CNPJ
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <FileText className="h-3.5 w-3.5 text-slate-400" />
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Ex: 12-3456789 ou CNPJ"
+                      value={tenantTaxId}
+                      onChange={(e) => setTenantTaxId(e.target.value)}
+                      className="w-full text-xs pl-9 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                    Telefone de Contato
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Phone className="h-3.5 w-3.5 text-slate-400" />
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Ex: +1 (305) 555-0199"
+                      value={tenantPhone}
+                      onChange={(e) => setTenantPhone(e.target.value)}
+                      className="w-full text-xs pl-9 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                  Endereço Físico / Fiscal
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <MapPin className="h-3.5 w-3.5 text-slate-400" />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Ex: 7950 NW 53rd St, Suite 300, Miami, FL 33166"
+                    value={tenantAddress}
+                    onChange={(e) => setTenantAddress(e.target.value)}
+                    className="w-full text-xs pl-9 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
                     Plano de Faturamento
                   </label>
                   <select
@@ -745,6 +839,53 @@ export default function SuperadminPanel() {
                     <option value="180">180 Dias Compliance</option>
                   </select>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                  Módulos Inclusos na Licença
+                </label>
+                <div className="space-y-1.5 bg-slate-50 dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700">
+                  {moduleCatalog.map((m) => {
+                    const isChecked = m.isCore || newTenantModules.includes(m.key);
+                    return (
+                      <label key={m.key} className="flex items-start gap-2 cursor-pointer text-xs select-none">
+                        <input
+                          type="checkbox"
+                          disabled={m.isCore}
+                          checked={isChecked}
+                          onChange={(e) => {
+                            if (m.isCore) return;
+                            if (e.target.checked) {
+                              setNewTenantModules([...newTenantModules, m.key]);
+                            } else {
+                              setNewTenantModules(newTenantModules.filter(k => k !== m.key));
+                            }
+                          }}
+                          className="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 disabled:opacity-50"
+                        />
+                        <span className="leading-tight">
+                          <strong className="text-slate-800 dark:text-slate-200 block text-[11px]">
+                            {m.name} {m.isCore && <span className="text-[9px] text-slate-400 font-normal">(Core — Padrão)</span>}
+                          </strong>
+                          <span className="text-[10px] text-slate-400 font-normal block">{m.description}</span>
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                  Validade da Licença Anual
+                </label>
+                <input
+                  type="date"
+                  value={newTenantLicenseExpiresAt}
+                  onChange={(e) => setNewTenantLicenseExpiresAt(e.target.value)}
+                  className="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                />
               </div>
 
               <div>
@@ -788,6 +929,7 @@ export default function SuperadminPanel() {
                     <th className="py-2.5 px-2">ID</th>
                     <th className="py-2.5 px-2">Plano / Retenção</th>
                     <th className="py-2.5 px-2">Status</th>
+                    <th className="py-2.5 px-2">Módulos / Licença</th>
                     <th className="py-2.5 px-2">Uso / Saúde</th>
                     <th className="py-2.5 px-2 text-right">Ações</th>
                   </tr>
@@ -800,7 +942,7 @@ export default function SuperadminPanel() {
                       <tr key={t.tenantId} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
                         <td className="py-3 px-2">
                           {isEditing ? (
-                            <div className="space-y-1">
+                            <div className="space-y-1 min-w-[160px]">
                               <input
                                 type="text"
                                 value={editName}
@@ -815,12 +957,48 @@ export default function SuperadminPanel() {
                                 className="w-full text-[10px] font-mono bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-1.5 py-1 text-slate-900 dark:text-white"
                                 placeholder="Domínio / E-mail"
                               />
+                              <input
+                                type="text"
+                                value={editTaxId}
+                                onChange={(e) => setEditTaxId(e.target.value)}
+                                className="w-full text-[10px] bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-1.5 py-1 text-slate-900 dark:text-white"
+                                placeholder="EIN / Tax ID / CNPJ"
+                              />
+                              <input
+                                type="text"
+                                value={editPhone}
+                                onChange={(e) => setEditPhone(e.target.value)}
+                                className="w-full text-[10px] bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-1.5 py-1 text-slate-900 dark:text-white"
+                                placeholder="Telefone"
+                              />
+                              <input
+                                type="text"
+                                value={editAddress}
+                                onChange={(e) => setEditAddress(e.target.value)}
+                                className="w-full text-[10px] bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-1.5 py-1 text-slate-900 dark:text-white"
+                                placeholder="Endereço"
+                              />
                             </div>
                           ) : (
-                            <>
+                            <div>
                               <span className="font-bold text-slate-900 dark:text-white block">{t.name}</span>
                               <span className="text-[10px] font-mono text-slate-400 block mt-0.5">{t.domain}</span>
-                            </>
+                              {t.taxId && (
+                                <span className="text-[10px] text-slate-500 dark:text-slate-400 block mt-0.5 flex items-center gap-1">
+                                  <FileText className="h-3 w-3 text-slate-400 shrink-0" /> {t.taxId}
+                                </span>
+                              )}
+                              {t.phone && (
+                                <span className="text-[10px] text-slate-500 dark:text-slate-400 block mt-0.5 flex items-center gap-1">
+                                  <Phone className="h-3 w-3 text-slate-400 shrink-0" /> {t.phone}
+                                </span>
+                              )}
+                              {t.address && (
+                                <span className="text-[10px] text-slate-400 block mt-0.5 truncate max-w-[200px] flex items-center gap-1" title={t.address}>
+                                  <MapPin className="h-3 w-3 text-slate-400 shrink-0" /> {t.address}
+                                </span>
+                              )}
+                            </div>
                           )}
                         </td>
                         <td className="py-3 px-2 font-mono text-slate-500 text-[10px]">{t.tenantId}</td>
@@ -887,6 +1065,77 @@ export default function SuperadminPanel() {
                               <span className={`h-1 w-1 rounded-full ${t.status === "active" ? "bg-emerald-500" : "bg-red-500"}`} />
                               {t.status === "active" ? "Ativo" : "Suspenso"}
                             </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-2">
+                          {isEditing ? (
+                            <div className="space-y-2 min-w-[180px]">
+                              <div>
+                                <span className="text-[9px] font-bold text-slate-400 uppercase block mb-1">Módulos:</span>
+                                <div className="space-y-1">
+                                  {moduleCatalog.map((m) => {
+                                    const checked = m.isCore || editModules.includes(m.key);
+                                    return (
+                                      <label key={m.key} className="flex items-center gap-1.5 text-[10px] cursor-pointer">
+                                        <input
+                                          type="checkbox"
+                                          disabled={m.isCore}
+                                          checked={checked}
+                                          onChange={(e) => {
+                                            if (m.isCore) return;
+                                            if (e.target.checked) {
+                                              setEditModules([...editModules, m.key]);
+                                            } else {
+                                              setEditModules(editModules.filter(k => k !== m.key));
+                                            }
+                                          }}
+                                          className="rounded border-slate-300 text-indigo-600 text-[10px]"
+                                        />
+                                        <span className={m.isCore ? "text-slate-400" : "text-slate-700 dark:text-slate-200"}>
+                                          {m.name}
+                                        </span>
+                                      </label>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                              <div>
+                                <span className="text-[9px] font-bold text-slate-400 uppercase block mb-0.5">Validade da Licença:</span>
+                                <input
+                                  type="date"
+                                  value={editLicenseExpiresAt}
+                                  onChange={(e) => setEditLicenseExpiresAt(e.target.value)}
+                                  className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[10px] p-1 w-full text-slate-900 dark:text-white"
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="space-y-1 max-w-[200px]">
+                              <div className="flex flex-wrap gap-1">
+                                {(t.enabledModules || ['freight_forwarding', 'warehouse']).map((modKey) => {
+                                  const def = moduleCatalog.find(m => m.key === modKey);
+                                  const name = def ? def.name : modKey;
+                                  const isCore = def ? def.isCore : (modKey === 'freight_forwarding' || modKey === 'warehouse');
+                                  return (
+                                    <span
+                                      key={modKey}
+                                      className={`px-1.5 py-0.5 rounded text-[9px] font-semibold ${
+                                        isCore
+                                          ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                                          : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200/20'
+                                      }`}
+                                    >
+                                      {name}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                              <span className="block text-[9px] text-slate-400">
+                                {t.licenseExpiresAt
+                                  ? `Licença até: ${new Date(t.licenseExpiresAt).toLocaleDateString('pt-BR')}`
+                                  : 'Licença sem expiração'}
+                              </span>
+                            </div>
                           )}
                         </td>
                         <td className="py-3 px-2">
@@ -979,12 +1228,17 @@ export default function SuperadminPanel() {
                                     setEditingTenant(t.tenantId);
                                     setEditName(t.name);
                                     setEditDomain(t.domain);
+                                    setEditTaxId(t.taxId || "");
+                                    setEditPhone(t.phone || "");
+                                    setEditAddress(t.address || "");
                                     setEditPlan(t.planTier);
                                     setEditStatus(t.status);
                                     setEditRetention(String(t.retentionDays || 30));
+                                    setEditModules(t.enabledModules || []);
+                                    setEditLicenseExpiresAt(t.licenseExpiresAt ? String(t.licenseExpiresAt).slice(0, 10) : "");
                                   }}
                                   className="p-1.5 text-slate-700 dark:text-slate-200 border border-slate-250 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
-                                  title="Configurar Plano/Retenção"
+                                  title="Configurar Plano/Módulos/Retenção"
                                 >
                                   <Sliders className="h-3.5 w-3.5" />
                                 </button>

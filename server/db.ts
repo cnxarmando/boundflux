@@ -713,6 +713,19 @@ export async function initDatabase() {
           delete t.customRetentionDays;
           changed = true;
         }
+        // Backfill enabledModules for tenants created before module-based licensing
+        // existed. Core modules (freight_forwarding, warehouse) are what BoundFlux
+        // already did for every tenant, so that's a safe default — it doesn't grant
+        // any add-on module (three_pl, pickup_delivery, vehicle_inventory, accounting)
+        // that the tenant hasn't actually licensed.
+        if (!Array.isArray(t.enabledModules)) {
+          t.enabledModules = ["freight_forwarding", "warehouse"];
+          changed = true;
+        }
+        if (t.licenseExpiresAt === undefined) {
+          t.licenseExpiresAt = null;
+          changed = true;
+        }
         if (changed) { needsSync = true; }
         return t;
       });
