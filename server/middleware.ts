@@ -4,7 +4,20 @@ import { TenantRole, PlatformRole } from "../src/types";
 import { loadDB } from "./db";
 
 // JWT Secret Key
-export const JWT_SECRET = process.env.JWT_SECRET || "boundflux-jwt-secret-key-2026-production-secure";
+// A hardcoded fallback is fine for local development, but must never be used in
+// production — that string is committed to the repo history, so anyone who reads the
+// source (which will happen, since this is a product meant to be sold to other tenants)
+// could forge a valid signed token for any user, including a superadmin. Fail loudly at
+// boot instead of silently running an insecure production deployment.
+const DEV_ONLY_FALLBACK_SECRET = "boundflux-jwt-secret-key-2026-production-secure";
+if (process.env.NODE_ENV === "production" && !process.env.JWT_SECRET) {
+  throw new Error(
+    "FATAL: JWT_SECRET environment variable is not set. Refusing to start in production " +
+    "with the hardcoded fallback secret, which is public in the source code. Set a real " +
+    "JWT_SECRET (e.g. a long random string) in the production environment before starting the server."
+  );
+}
+export const JWT_SECRET = process.env.JWT_SECRET || DEV_ONLY_FALLBACK_SECRET;
 
 export function generateAuthToken(user: any): string {
   return jwt.sign(
@@ -36,15 +49,19 @@ export const authMiddleware = (req: AuthenticatedRequest, res: express.Response,
   const token = authHeader.split(" ")[1];
   let uid: string | null = null;
 
+  // No fallback to the old "mock-jwt-token-<uid>" / "google-jwt-token-<uid>" format here.
+  // That format has no signature at all — anyone who knows or guesses a uid could forge
+  // one and authenticate as that user, including a superadmin. Accepting it "for backwards
+  // compatibility" would keep that exact hole open forever. A token must verify as a real
+  // signed JWT or the request is rejected; any session issued before this fix is invalid
+  // and the user simply needs to log in again to get a real token.
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { uid: string };
     if (decoded && decoded.uid) {
       uid = decoded.uid;
     }
   } catch (err) {
-    if (token.startsWith("mock-jwt-token-") || token.startsWith("google-jwt-token-")) {
-      uid = token.replace("mock-jwt-token-", "").replace("google-jwt-token-", "");
-    }
+    // fall through — uid stays null, request gets rejected below
   }
 
   if (!uid) {

@@ -13,7 +13,10 @@ function getResourceArray(db: any, resource: string) {
 }
 
 // Data Integrity audit
-auditRouter.get("/audit/data-integrity", authMiddleware, (req: AuthenticatedRequest, res) => {
+// Superadmin-only: this reports anomaly counts across the WHOLE platform (all tenants
+// combined), not just the caller's own tenant. Letting any regular tenant user call this
+// leaked aggregate information about other customers' data.
+auditRouter.get("/audit/data-integrity", authMiddleware, requirePlatformRole("superadmin"), (req: AuthenticatedRequest, res) => {
   const currentDB = loadDB();
   const tenants = currentDB.tenants || [];
   const validTenantIds = new Set(tenants.map(t => t.tenantId));
